@@ -63,6 +63,7 @@ Thumbs.db
 *.out
 *.fdb_latexmk
 *.fls
+*.synctex.gz
 
 # Project specific
 plots/
