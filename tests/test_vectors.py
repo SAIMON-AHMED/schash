@@ -441,10 +441,8 @@ KAT_VECTORS = {
         ]),
     ],
     "sch192": [
-        ("", None),  # Placeholder - regenerate with actual values
     ],
     "sch256": [
-        ("", None),  # Placeholder - regenerate with actual values
     ],
 }
 
@@ -454,8 +452,6 @@ def test_known_answer_vectors(params_name: str) -> None:
     """Verify known-answer test vectors for reproducibility."""
     params = get_params(params_name)
     for msg_hex, expected in KAT_VECTORS.get(params_name, []):
-        if expected is None:
-            continue  # Skip placeholder entries
         message = bytes.fromhex(msg_hex)
         digest = sch_hash(message, params)
         assert digest == expected, (

@@ -57,6 +57,13 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
+# LaTeX
+*.aux
+*.log
+*.out
+*.fdb_latexmk
+*.fls
+
 # Project specific
 plots/
 plots_multi/
