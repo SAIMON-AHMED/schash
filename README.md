@@ -22,8 +22,6 @@ tests/
   test_vectors.py   # pytest regression suite (vectors + invariants)
 ```
 
-A PDF copy of the paper is stored alongside the sources for convenience.
-
 ## Finite field arithmetic
 
 `sch/field.py` exposes a light `PrimeField` helper with `mod`, `add`, `sub`, `mul`, `pow`, `inv`, and `neg`. All state values are plain Python integers reduced modulo `p`. Modules accept a `PrimeField` instance so every operation is explicit and deterministic.

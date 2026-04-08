@@ -1,0 +1,8 @@
+# Symbolic Composition Hashing (SCH) - Dependencies
+
+# Core runtime dependencies
+# (None - SCH uses only Python standard library for core functionality)
+
+# Optional dependencies for testing and visualization
+matplotlib>=3.0.0
+pytest>=7.0.0

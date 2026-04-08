@@ -1,0 +1,932 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{graphicx,tabularx,booktabs,siunitx,float}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\SetKwComment{Comment}{$\triangleright$\ }{}
+
+\usepackage{url}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+\usepackage{cite}
+
+\graphicspath{{.}{figs/}}
+
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\Fpn}{\mathbb{F}_p^n}
+
+\DeclareMathOperator{\deggr}{deg}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{assumption}{Assumption}[section]
+
+
+\begin{document}
+
+\title{Symbolic Composition Hashing: An Algebraic Sponge over Finite Fields with ZK-Friendly Structure}
+\author{Saimon Ahmed}
+\maketitle
+\onecolumn
+\normalsize
+
+
+\begin{abstract}
+We introduce \emph{Symbolic Composition Hashing (SCH)}, a new algebraic framework for constructing cryptographic hash functions over finite fields based on the symbolic composition of triangular and affine polynomial maps. The construction defines a broad family of permutation-based designs whose security is governed by the algebraic complexity of the resulting multivariate systems.  
+
+To capture this complexity, we formalize the \emph{Symbolic Composition Inversion Problem (SCIP)}, a hardness assumption describing the difficulty of inverting or colliding composed polynomial permutations when only their symbolic representation is available. Under SCIP and standard sponge-based arguments, SCH provides a general foundation for preimage and collision resistance.  
+
+We analyze structural properties of the construction, including algebraic degree growth, diffusion behavior, and resistance to generic algebraic attacks, and we support these observations with preliminary experimental evaluations. Rather than proposing a finalized hash standard, this work establishes a \emph{foundational algebraic family and hardness framework} intended to support further cryptanalytic study and future cryptographic design.
+\end{abstract}
+
+
+\noindent\textbf{Keywords:} Cryptographic hash functions; sponge construction; multivariate cryptography; zero-knowledge proofs; finite fields; post-quantum cryptography.
+
+
+
+\section{Introduction}
+
+Cryptographic hash functions are a fundamental component of modern security systems, underpinning applications ranging from data integrity and authentication to blockchain protocols and privacy-preserving constructions. While most standardized hash designs rely on bit-oriented primitives, there has been growing interest in algebraic and multivariate approaches that operate natively over finite fields, motivated by their structural richness and potential resistance to emerging attack models.
+
+Existing algebraic hash constructions typically focus on specific instantiations or fixed designs, leaving open the question of whether broader algebraic \emph{frameworks} can be defined in which security properties emerge from general structural principles rather than ad hoc choices. In particular, the role of symbolic composition of polynomial maps as a source of algebraic hardness remains underexplored.
+
+In this work, we propose \emph{Symbolic Composition Hashing (SCH)}, a general construction paradigm based on iterated compositions of triangular and affine polynomial maps over finite fields. By treating the composed permutation symbolically rather than numerically, SCH induces dense multivariate systems whose inversion and collision properties depend on the algebraic complexity of the composition itself.
+
+To reason about the security of this family, we formalize the \emph{Symbolic Composition Inversion Problem (SCIP)}, which captures the difficulty of recovering preimages or collisions given only the symbolic representation of a composed polynomial permutation. SCIP is intended as a unifying abstraction for the algebraic hardness arising from symbolic composition and serves as a focal point for future cryptanalytic investigation.
+
+We emphasize that this work does not claim a finalized or standardized hash primitive. Instead, our goal is to define a coherent algebraic family, articulate the underlying hardness assumptions, and analyze the resulting structural properties. Security arguments are therefore conditional and heuristic, relying on SCIP and generic sponge-based reasoning, with the expectation that further cryptanalysis will refine and challenge these assumptions.
+
+\paragraph{Contributions.}
+This paper makes the following contributions:
+\begin{itemize}
+  \item We introduce \emph{Symbolic Composition Hashing (SCH)}, a general algebraic framework for hash construction based on symbolic polynomial composition.
+  \item We formalize the \emph{Symbolic Composition Inversion Problem (SCIP)} as a hardness assumption governing preimage and collision resistance in this setting.
+  \item We analyze structural properties of SCH, including algebraic degree growth, diffusion behavior, and resistance to generic algebraic attacks.
+  \item We provide preliminary experimental results illustrating degree growth and diffusion characteristics across multiple composition depths.
+  \item We identify open problems and research directions for further cryptanalysis and parameter selection.
+\end{itemize}
+
+
+
+\section{Related Work}
+\label{sec:related}
+
+The design of cryptographic hash functions has traditionally been dominated by bit-oriented constructions such as Merkle--Damg{\aa}rd and sponge-based designs, exemplified by standardized primitives including SHA--2 and SHA--3. These constructions rely on carefully engineered Boolean components and round functions to achieve diffusion, nonlinearity, and resistance to differential and algebraic attacks. While highly successful in practice, such designs operate primarily at the bit level and offer limited insight into hash constructions defined natively over algebraic structures such as finite fields.
+
+In contrast, algebraic and multivariate cryptography has explored the use of polynomial maps over finite fields as a basis for cryptographic primitives, most notably in the context of multivariate public-key cryptosystems. This body of work has produced a rich theory of polynomial transformations, including triangular and affine maps, whose compositional properties are well understood in algebraic geometry and computational algebra. However, these techniques have primarily been applied to encryption and signature schemes rather than to hash function design.
+
+Several works have investigated algebraic hash constructions or permutations defined over finite fields, often motivated by efficiency, structural simplicity, or resistance to specific classes of attacks. Such designs typically fix a concrete polynomial mapping or round function and analyze its behavior under algebraic, differential, or interpolation-based attacks. While these approaches yield valuable insights into specific constructions, they do not generally provide a broader framework in which algebraic hardness arises from structural principles shared across a family of designs.
+
+The use of permutation-based hash constructions, particularly sponge and duplex frameworks, has further highlighted the importance of understanding the internal structure of permutations used within hash functions. Prior analyses have shown that diffusion properties, algebraic degree growth, and resistance to generic attacks play a critical role in determining security margins. Nevertheless, most existing work treats the permutation as a black box or analyzes its numerical behavior, rather than focusing on the symbolic structure induced by iterated algebraic composition.
+
+From a cryptanalytic perspective, algebraic attacks on multivariate systems---including Gr\"obner basis methods, XL-type algorithms, and related techniques---provide a natural lens through which to evaluate algebraic hash constructions. The effectiveness of such attacks depends strongly on system parameters such as degree growth, variable density, and the presence or absence of exploitable structure. While extensive literature exists on the complexity of solving random or structured multivariate systems, the implications of symbolic composition for inducing algebraic hardness in hash constructions remain insufficiently explored.
+
+The present work aims to bridge these areas by introducing a general algebraic framework for hash construction based on symbolic composition of polynomial maps. Rather than proposing a single fixed design, we define a family of constructions whose security properties are governed by the algebraic complexity of composition itself. By formalizing the Symbolic Composition Inversion Problem (SCIP), we seek to provide a unifying abstraction that connects algebraic structure, compositional depth, and cryptanalytic hardness, thereby opening new directions for both cryptographic design and algebraic analysis.
+
+
+\section{Preliminaries}
+\label{sec:prelim}
+
+\subsection{Finite Fields and Polynomial Maps}
+
+Let $p$ be a prime and let $\Fp$ denote the finite field of cardinality $p$.
+For a positive integer $n$, we consider vectors $x=(x_1,\ldots,x_n)\in \Fp^n$
+and polynomial maps $F:\Fp^n\to \Fp^n$ of the form
+\[
+F(x) = (f_1(x), \ldots, f_n(x)),
+\]
+where each coordinate function $f_i \in \Fp[x_1, \ldots, x_n]$ is a multivariate polynomial.
+
+Polynomial maps over finite fields provide a natural algebraic setting for cryptographic constructions, as their structural properties---such as degree growth, variable interaction, and compositional behavior---can be analyzed using tools from computational algebra while remaining compatible with finite-field arithmetic.
+
+\subsection{Affine and Triangular Polynomial Maps}
+
+A polynomial map $T : \Fp^n \to \Fp^n$ is called \emph{triangular} (in the
+\emph{lower-triangular} convention) if each coordinate function depends
+only on the current and \emph{preceding} variables, i.e.,
+\[
+T(x_1,\ldots,x_n) =
+\bigl(
+t_1(x_1),\;
+t_2(x_1,x_2),\;
+\ldots,\;
+t_n(x_1,\ldots,x_n)
+\bigr),
+\]
+with $t_i \in \Fp[x_1,\ldots,x_i]$. A particularly useful bijective subclass
+is the \emph{unitriangular} form
+\[
+T(x_1,\ldots,x_n)=\bigl(x_1+c,\; x_2+g_2(x_1),\; \ldots,\; x_n+g_n(x_1,\ldots,x_{n-1})\bigr),
+\]
+where $c\in \Fp$ and each $g_i \in \Fp[x_1,\ldots,x_{i-1}]$. Such maps are
+bijective and admit efficient inversion by \emph{forward substitution}.
+Moreover, their Jacobian is lower-triangular with all diagonal entries equal
+to $1$, hence $\det(J_T)=1$ over $\Fp$.
+
+
+\subsection{Composition and Algebraic Degree}
+
+Given polynomial maps $F, G : \Fp^n \to \Fp^n$, their composition is defined as
+\[
+(F \circ G)(x) = F(G(x)).
+\]
+Repeated composition of polynomial maps generally increases algebraic complexity, as reflected in the growth of algebraic degree and the densification of variable interactions.
+
+The \emph{algebraic degree} of a polynomial map $F$, denoted $\deg(F)$, is defined as
+\[
+\deg(F) = \max_{1 \leq i \leq n} \deg(f_i),
+\]
+where $\deg(f_i)$ is the total degree of the polynomial $f_i$. Under composition, degrees may grow rapidly, especially when nonlinear triangular maps are interleaved with affine transformations.
+
+Degree growth and diffusion under composition are central indicators of resistance to algebraic and interpolation-based attacks, and they play a key role in the security analysis of algebraic cryptographic constructions.
+
+\subsection{Symbolic Representation of Polynomial Maps}
+
+In this work, we distinguish between the \emph{symbolic} and \emph{numerical} representations of polynomial maps. A symbolic representation treats each coordinate polynomial as an explicit algebraic expression in $\Fp[x_1, \ldots, x_n]$, preserving full structural information about variable dependencies and coefficients.
+
+Symbolic representations arise naturally when polynomial maps are constructed through explicit algebraic composition. While such representations enable formal analysis of structure and degree growth, they also induce dense multivariate systems whose inversion or collision-finding may be computationally difficult.
+
+The distinction between symbolic and numerical representations is fundamental to the construction introduced in this paper, as the hardness of inverting symbolically composed maps forms the basis of the security assumptions underlying Symbolic Composition Hashing.
+
+\subsection{Cryptographic Hashing and Sponge Constructions}
+
+A cryptographic hash function maps inputs of arbitrary length to fixed-length outputs while aiming to provide properties such as preimage resistance, second-preimage resistance, and collision resistance. Sponge constructions offer a flexible framework for building hash functions from an underlying permutation, absorbing input blocks into an internal state and squeezing out output blocks.
+
+In permutation-based hash designs, the security of the hash function depends critically on the structural properties of the internal permutation, including its diffusion behavior and resistance to generic attacks. In the context of algebraic constructions, these properties are closely tied to algebraic degree growth and the complexity of the induced polynomial systems.
+
+The SCH framework adopts the sponge paradigm while focusing on permutations generated through symbolic composition of polynomial maps, thereby linking algebraic structure directly to cryptographic security considerations.
+
+
+\section{Symbolic Composition Hashing Construction}
+\label{sec:construction}
+
+This section defines the \emph{Symbolic Composition Hashing (SCH)} construction at an abstract level.
+The goal is to specify a general family of algebraic permutations over finite fields whose security
+derives from symbolic composition rather than from a fixed numerical design.
+Concrete parameter choices and instantiations are deferred to Section~\ref{sec:spec}.
+
+\subsection{Construction Overview}
+
+Let $p$ be a prime and let $\Fp$ denote the finite field of cardinality $p$.
+Let $n \ge 1$ be the state dimension.
+SCH constructs a permutation
+\[
+P : \Fp^n \longrightarrow \Fp^n
+\]
+as a symbolic composition of affine and triangular polynomial maps.
+
+The defining feature of SCH is that the permutation $P$ is treated as an
+\emph{explicit symbolic polynomial mapping}, obtained by algebraic composition,
+rather than as a black-box numerical routine.
+This symbolic representation induces dense multivariate polynomial systems whose
+inversion and collision properties form the basis of the security analysis.
+
+\subsection{Affine and Triangular Components}
+
+SCH is built from two classes of bijective polynomial maps:
+
+\paragraph{Affine maps.}
+An affine map $A : \Fp^n \to \Fp^n$ is defined as
+\[
+A(x) = Mx + b,
+\]
+where $M \in \Fp^{n \times n}$ is invertible and $b \in \Fp^n$.
+Affine maps provide global linear mixing of variables and preserve bijectivity.
+
+\textbf{Triangular maps.} A triangular map $T : \Fp^n \to \Fp^n$ (lower-triangular
+convention) is of the form
+\[
+T(x_1,\ldots,x_n)=
+\bigl(
+x_1+c,\;
+x_2+g_2(x_1),\;
+x_3+g_3(x_1,x_2),\;
+\ldots,\;
+x_n+g_n(x_1,\ldots,x_{n-1})
+\bigr),
+\]
+where $c\in \Fp$ and each $g_i$ is a polynomial over $\Fp$ in the indicated
+variables. Such maps are bijective and admit efficient inversion by forward
+substitution. In addition, $J_T$ is lower-triangular with ones on the diagonal,
+so $\det(J_T)=1$.
+
+
+\subsection{Symbolic Composition}
+
+Let $k \ge 1$ be an integer referred to as the \emph{composition depth} or
+\emph{number of rounds}.
+The SCH permutation $P$ is defined as the composition
+\[
+P
+=
+A_k \circ T_k \circ A_{k-1} \circ T_{k-1} \circ \cdots \circ A_1 \circ T_1,
+\]
+where each $A_i$ is an affine map and each $T_i$ is a triangular map.
+
+The permutation $P$ is constructed \emph{symbolically} by explicit algebraic
+substitution.
+That is, the coordinate polynomials of $P$ are obtained by expanding the
+composition in $\Fp[x_1,\ldots,x_n]$, rather than by treating each round as
+an opaque numerical operation.
+
+As the composition depth $k$ increases, the resulting coordinate polynomials
+exhibit increasing algebraic degree, variable interaction, and symbolic density.
+These properties are central to the intended resistance against algebraic and
+interpolation-based attacks.
+
+\subsection{Design Rationale}
+
+The SCH construction is guided by the following principles:
+
+\begin{itemize}
+  \item \textbf{Bijectivity.}
+  Each component map is invertible, ensuring that the composed mapping $P$
+  is a permutation on $\Fp^n$.
+
+  \item \textbf{Degree Growth.}
+  Nonlinear triangular layers introduce controlled algebraic degree growth,
+  which is amplified by interleaving affine mixing layers.
+
+  \item \textbf{Symbolic Density.}
+  Explicit symbolic composition produces dense multivariate polynomials,
+  discouraging sparse or low-degree representations exploitable by algebraic solvers.
+
+  \item \textbf{Structural Flexibility.}
+  Parameters such as the state dimension $n$, composition depth $k$,
+  and polynomial degrees are left adjustable within the framework.
+\end{itemize}
+
+\subsection{From Permutation to Hash Function}
+
+The SCH construction defines a family of algebraic permutations.
+To obtain a cryptographic hash function, the permutation $P$ is embedded
+into a sponge construction, as specified in Section~\ref{sec:spec}.
+Standard sponge arguments then relate the security of the hash function
+to the difficulty of inverting or colliding the underlying permutation.
+
+\subsection{Relation to SCIP}
+
+The security of SCH is formalized through the
+\emph{Symbolic Composition Inversion Problem (SCIP)}.
+Informally, SCIP captures the difficulty of recovering preimages or collisions
+given only the symbolic polynomial representation of $P$, without access to its
+round decomposition.
+
+By defining $P$ through symbolic composition rather than numerical design,
+SCH aims to maximize the algebraic complexity encountered by generic inversion
+and collision-finding algorithms.
+A formal statement of SCIP and its role in security analysis is given in
+Section~\ref{sec:security}.
+
+
+
+\section{Specification}
+\label{sec:spec}
+
+This section specifies a \emph{reference instantiation} of the Symbolic Composition
+Hashing (SCH) framework for the purposes of reproducibility, experimental
+evaluation, and implementation clarity. The parameter choices, constant-generation
+procedures, encoding rules, and mode semantics defined here are not claimed to be
+optimal or finalized. Rather, they provide a concrete baseline instance of the
+general SCH construction introduced in Section~\ref{sec:construction}, intended
+to support empirical analysis and third-party cryptanalytic investigation.
+
+\subsection{Parameters}
+
+Let $p$ be a publicly specified prime and let $\Fp$ denote the field $\mathbb{F}_p$.
+The sponge state has size $n=r+c$, where $r$ is the \emph{rate} and
+$c$ is the \emph{capacity}.
+Parameters are selected so that generic sponge bounds provide
+$2^{128}$ or $2^{256}$ security against generic collision and preimage attacks:
+\[
+p^{c/2} \ge 2^{128},
+\qquad
+p^{c} \ge 2^{256},
+\qquad
+p^{r} \ge 2^{256}.
+\]
+The first inequality targets collision resistance via the birthday bound,
+the second targets preimage resistance derived from the capacity,
+and the third ensures that each absorbed rate block spans a space of size
+at least $2^{256}$ when encoding inputs as field elements
+(see Section~\ref{sec:spec-encoding}).
+
+These inequalities are conservative sizing targets used for parameter selection;
+Table~\ref{tab:params} lists representative instantiations intended to meet
+these bounds under standard sponge-security heuristics rather than exact
+tight proofs.
+
+Primality of $p$ is assumed as part of parameter selection;
+primality testing is not part of the SCH protocol.
+
+\begin{table}[H]
+\centering
+\caption{Representative SCH parameter sets (conservative sizing targets).}
+\label{tab:params}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Profile & Prime field $p$ & $\log_2(p)$ & $n$ & $r$ & $c$ & Suggested $k$ \\
+\midrule
+Mini example (Sec.~\ref{sec:worked-example}) &
+$31$ & $\approx 5$ &
+3 & 2 & 1 & 3 \\
+
+Toy (non-secure, for testing) &
+$2^{31}-1$ & 31 &
+9 & 6 & 3 & 5 \\
+
+Large-field baseline (highly conservative) &
+$2^{255}-19$ & 255 &
+12 & 8 & 4 & 8--12 \\
+
+Large-field higher-capacity (highly conservative) &
+$2^{255}-19$ & 255 &
+16 & 8 & 8 & 10--16 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Notes.}
+State size is $n=r+c$. Under standard sponge heuristics, generic collision work is
+$\approx p^{c/2}$ and generic preimage work is $\approx p^{c}$ (capacity-driven).
+With $p\approx 2^{255}$ and $c=4$, we obtain $p^{c/2}\approx 2^{510}$ and
+$p^{c}\approx 2^{1020}$, which is far above $2^{128}$ and $2^{256}$.
+The round count $k$ is a heuristic security/performance knob and should be
+validated by degree/diffusion experiments and cryptanalysis.
+\end{minipage}
+\end{table}
+
+
+
+\paragraph{Toy example.}
+For illustration and worked examples only, we may use
+\[
+p = 2^{31}-1,\quad n = 9,\quad r = 6,\quad c = 3,\quad k = 5 \text{ rounds}.
+\]
+This setting is not intended to represent the recommended security tiers.
+
+\subsection{Encoding and Padding}
+\label{sec:spec-encoding}
+
+SCH hashes arbitrary byte strings by (i) padding the input to a multiple of a
+fixed byte block size, (ii) packing each block into an element of $\Fp$, and
+(iii) absorbing those field elements into the sponge rate.
+This specification is deterministic, injective, and unambiguous.
+
+\paragraph{Byte order and notation.}
+Let $m \in \{0,1\}^{8\ell}$ be a message consisting of $\ell$ bytes.
+Write $m = (m_0,\ldots,m_{\ell-1})$, where each $m_i \in \{0,\ldots,255\}$ denotes
+a byte.
+Packing within each block follows a \emph{little-endian} convention: the first
+byte of a block is the least significant.
+
+\paragraph{Block size.}
+Let
+\[
+B \;=\; \left\lfloor \log_{256}(p-1)\right\rfloor
+\;=\; \left\lfloor \frac{\log_2(p-1)}{8}\right\rfloor .
+\]
+Then $256^B \le p-1$, ensuring that every packed $B$-byte block corresponds to a
+unique element of $\Fp$ without modular wraparound.
+For example, for $p = 2^{255}-19$, we obtain $B = 31$.
+
+\paragraph{Padding (10\texorpdfstring{$^\ast$}{*} padding).}
+Let $\mathrm{pad}(m)$ be the padded byte string obtained by appending a single
+byte \texttt{0x80}, followed by zero bytes until the total length is a multiple
+of $B$.
+Formally, define
+\[
+m' \;=\; m \,\|\, \texttt{0x80} \,\|\, 
+\underbrace{\texttt{0x00}\,\|\,\cdots\,\|\,\texttt{0x00}}_{t\ \text{bytes}},
+\]
+where $t$ is the unique integer in $\{0,\ldots,B-1\}$ such that
+\[
+\lvert m' \rvert \equiv 0 \pmod{B}.
+\]
+This padding rule is injective and prevents ambiguity for messages with trailing
+zero bytes.
+
+\paragraph{Packing bytes into field elements.}
+Partition $m'$ into $L$ consecutive blocks of $B$ bytes:
+\[
+m' = \mathrm{blk}_0 \,\|\, \mathrm{blk}_1 \,\|\, \cdots \,\|\, \mathrm{blk}_{L-1},
+\qquad \lvert \mathrm{blk}_j \rvert = B.
+\]
+Define the packing map $\mathrm{pack}:\{0,\ldots,255\}^B \to \Fp$ by
+\[
+\mathrm{pack}(\mathrm{blk}_j)
+= \sum_{i=0}^{B-1} \mathrm{blk}_j[i] \cdot 256^i
+\;\in\; \{0,\ldots,256^B-1\}
+\subset \{0,\ldots,p-2\}
+\subset \Fp .
+\]
+Let
+\[
+\alpha_j = \mathrm{pack}(\mathrm{blk}_j) \in \Fp,
+\qquad 0 \le j \le L-1.
+\]
+
+\paragraph{Rate absorption mapping.}
+Let the sponge state be $s \in \Fp^n$, where $n = r + c$ and the first $r$
+coordinates constitute the rate.
+Each packed element $\alpha_j$ is absorbed by updating
+\[
+s_1 \leftarrow s_1 + \alpha_j \pmod{p},
+\]
+followed by application of the permutation $P$.
+(Equivalently, absorption may be generalized to multiple rate coordinates; the
+single-coordinate rule above defines the reference encoding used throughout this
+paper for simplicity and reproducibility.)
+
+\paragraph{Domain separation.}
+To prevent cross-protocol collisions (e.g., between hashing and PRF-style usage),
+domain separation is achieved by initializing the state with a public tag
+$\tau \in \Fp$:
+\[
+s \leftarrow (\tau,0,0,\ldots,0) \in \Fp^n.
+\]
+The tag $\tau$ is derived deterministically from an ASCII identifier (e.g.,
+\texttt{"SCH"} or \texttt{"SCH-Hash"}) using the same packing rule, truncating to
+$B$ bytes if necessary.
+All experiments in this paper use $\tau = \mathrm{pack}(\texttt{"SCH"})$.
+
+\paragraph{Squeezing.}
+After absorption, output is produced by reading the first rate coordinate(s) and
+applying $P$ between output blocks, as in the standard sponge construction.
+For a $t$-field-element digest $(z_1,\ldots,z_t)$, define
+\[
+z_i = s_1 \in \Fp,
+\quad \text{then } s \leftarrow P(s),
+\quad \text{for } i = 1,\ldots,t.
+\]
+If a byte-string digest is required (e.g., 32 bytes), each $z_i$ is serialized in
+little-endian base-$256$ using exactly $B$ bytes and truncated to the desired
+output length.
+
+\paragraph{Implementation note.}
+The encoding above avoids modular reduction during packing (since $256^B < p$),
+is constant-time with respect to the message, and is directly compatible with
+field-native zero-knowledge circuits.
+
+
+
+\subsection{Permutation Definition}
+\label{sec:permutation-definition}
+
+The internal permutation $P : \Fp^n \rightarrow \Fp^n$ is defined as the
+composition of $k$ rounds, each consisting of a nonlinear triangular map
+followed by an affine mixing map. This ordering promotes rapid algebraic
+degree growth through nonlinear layers, while affine layers ensure global
+mixing of variables across the state.
+
+Formally, the $i$-th round is defined as
+\[
+f_i = A_i \circ T_i,
+\]
+where the components are specified as follows.
+
+\begin{itemize}
+  \item \textbf{Triangular layer.}
+  $T_i : \Fp^n \rightarrow \Fp^n$ is a \emph{lower-triangular unitriangular}
+  polynomial map of the form
+  \[
+  T_i(x_1,\ldots,x_n)=
+  \bigl(
+    x_1 + c_i,\;
+    x_2 + g_{i,2}(x_1),\;
+    x_3 + g_{i,3}(x_1,x_2),\;
+    \ldots,\;
+    x_n + g_{i,n}(x_1,\ldots,x_{n-1})
+  \bigr),
+  \]
+  where $c_i \in \Fp$ is a round constant and each
+  $g_{i,j} \in \Fp[x_1,\ldots,x_{j-1}]$ is a polynomial of bounded degree.
+  This form is bijective and admits efficient inversion by \emph{forward
+  substitution}. Moreover, the Jacobian matrix $J_{T_i}$ is lower-triangular
+  with all diagonal entries equal to $1$, and therefore
+  \[
+  \det(J_{T_i}) = 1 \quad \text{over } \Fp.
+  \]
+
+  \item \textbf{Affine mixing layer.}
+  $A_i : \Fp^n \rightarrow \Fp^n$ is an affine map defined by
+  \[
+  A_i(x) = M_i x + b_i,
+  \]
+  where $b_i \in \Fp^n$ and $M_i \in \mathrm{SL}_n(\Fp)$ satisfies
+  $\det(M_i) = 1$. The affine layer provides linear diffusion across all
+  state coordinates.
+\end{itemize}
+
+The restriction $\det(M_i)=1$ simplifies symbolic Jacobian analysis and
+ensures volume-preserving affine mixing; it is not required for bijectivity
+and may be relaxed in alternative instantiations of the framework.
+
+The full permutation is given by the composition
+\[
+P = f_k \circ f_{k-1} \circ \cdots \circ f_1
+  = A_k \circ T_k \circ \cdots \circ A_1 \circ T_1.
+\]
+Since each triangular layer $T_i$ has unit Jacobian determinant and each
+affine layer $A_i$ satisfies $\det(M_i)=1$, the composed permutation $P$
+is bijective with
+\[
+\det(J_P) = 1.
+\]
+Without access to the internal round decomposition, inverting $P$
+corresponds to solving a dense multivariate polynomial system whose algebraic
+degree and symbolic density grow rapidly as a function of the number of
+rounds~$k$.
+
+
+\section{Worked Example}
+\label{sec:worked-example}
+
+\textbf{Toy parameters.} Let $p=31$ and $n=3$, so computations are in $\Fp^3$ with
+$\Fp=\mathbb{F}_{31}$. In this worked example, we use two lower-triangular unitriangular
+layers (each with $\det(J)=1$) followed by an affine mixing layer with determinant $1$.
+
+\textbf{Component maps.} Define three bijective polynomial maps
+$f_1,f_2,f_3:\Fp^3\to\Fp^3$ by
+\[
+f_1(x_1,x_2,x_3)=\bigl(x_1+3,\; x_2+x_1^2,\; x_3+x_1x_2\bigr),
+\]
+\[
+f_2(x_1,x_2,x_3)=\bigl(x_1,\; x_2,\; x_3+x_1x_2\bigr),
+\]
+\[
+f_3(x_1,x_2,x_3)=\bigl(x_1+x_3,\; x_2+5,\; x_3\bigr).
+\]
+Here, $f_1$ and $f_2$ are lower-triangular unitriangular maps (hence $\det(J)=1$),
+and $f_3$ is affine with determinant $1$.
+
+Let the composed permutation be
+\[
+P=f_1\circ f_2\circ f_3.
+\]
+
+\textbf{Evaluation on an input.} For the input $x=(1,2,3)$, we compute:
+\[
+f_3(1,2,3)=(1+3,\;2+5,\;3)=(4,7,3),
+\]
+\[
+f_2(4,7,3)=(4,\;7,\;3+4\cdot 7)=(4,7,31)\equiv(4,7,0)\pmod{31},
+\]
+\[
+f_1(4,7,0)=\bigl(4+3,\;7+4^2,\;0+4\cdot 7\bigr)=(7,\;7+16,\;28)=(7,23,28).
+\]
+Hence,
+\[
+P(1,2,3)=(7,23,28)\in \Fp^3.
+\]
+
+\textbf{Jacobian check (example).} The Jacobian matrix of $f_1$ is
+\[
+J_{f_1}(x_1,x_2,x_3)=
+\begin{pmatrix}
+\frac{\partial}{\partial x_1}(x_1+3) & \frac{\partial}{\partial x_2}(x_1+3) & \frac{\partial}{\partial x_3}(x_1+3) \\
+\frac{\partial}{\partial x_1}(x_2+x_1^2) & \frac{\partial}{\partial x_2}(x_2+x_1^2) & \frac{\partial}{\partial x_3}(x_2+x_1^2) \\
+\frac{\partial}{\partial x_1}(x_3+x_1x_2) & \frac{\partial}{\partial x_2}(x_3+x_1x_2) & \frac{\partial}{\partial x_3}(x_3+x_1x_2)
+\end{pmatrix}
+=
+\begin{pmatrix}
+1 & 0 & 0 \\
+2x_1 & 1 & 0 \\
+x_2 & x_1 & 1
+\end{pmatrix}.
+\]
+This matrix is lower-triangular with ones on the diagonal, so
+\[
+\det(J_{f_1})=1 \quad \text{in } \Fp.
+\]
+Analogously, $f_2$ is lower-triangular with unit diagonal, so $\det(J_{f_2})=1$.
+The affine layer $f_3(x)=(x_1+x_3,\;x_2+5,\;x_3)$ has linear part
+
+$\left(\begin{smallmatrix}
+1 & 0 & 1\\
+0 & 1 & 0\\
+0 & 0 & 1
+\end{smallmatrix}\right)$
+
+with determinant $1$,
+hence $\det(J_{f_3})=1$ as well. Therefore $\det(J_P)=1$.
+
+
+
+\section{Security Analysis}
+\label{sec:security}
+
+This section analyzes the security properties of Symbolic Composition Hashing (SCH). We first formalize the Symbolic Composition Inversion Problem (SCIP), which underlies the security of the construction, and then discuss preimage resistance, collision resistance, and resistance to generic algebraic attacks under this assumption. All security claims in this section are conditional and heuristic, reflecting the exploratory and foundational nature of the construction.
+
+
+
+\subsection{The Symbolic Composition Inversion Problem}
+
+We formalize the core hardness assumption underlying SCH.
+
+\paragraph{Definition (Symbolic Composition Inversion Problem, SCIP).}
+Let $P : \Fp^n \to \Fp^n$ be a permutation obtained as a symbolic composition of affine and triangular polynomial maps as defined in Section~\ref{sec:construction}. The \emph{Symbolic Composition Inversion Problem (SCIP)} is the problem of recovering a preimage $x \in \Fp^n$ given an output $y = P(x)$ and only the symbolic polynomial representation of $P$, without access to its compositional decomposition.
+
+Variants of SCIP include the task of finding distinct inputs $x \neq x'$ such that $P(x) = P(x')$, corresponding to collision-finding in the induced hash construction.
+
+We emphasize that SCIP is not claimed to be strictly harder than inverting
+a uniformly random permutation over $\Fp^n$. Rather, SCIP captures the
+assumption that symbolic composition of structured but hidden invertible
+maps yields multivariate systems that are sufficiently dense and irregular
+to preclude exploitation by known algebraic techniques. This aligns SCIP
+with standard heuristic hardness assumptions commonly used in multivariate
+cryptography.
+
+
+\paragraph{Assumption (SCIP-$\lambda$).}
+For security parameter $\lambda$, we assume that for appropriately chosen parameters $(p,n,k)$, solving SCIP for the composed permutation $P$ requires computational effort at least $2^{\Omega(\lambda)}$ for generic algebraic algorithms.
+
+This assumption abstracts the algebraic hardness induced by symbolic composition and serves as the primary foundation for the security analysis that follows.
+
+
+
+\subsection{Preimage Resistance}
+
+Under the sponge construction, preimage resistance of SCH reduces to the difficulty of inverting the internal permutation $P$ on a subset of its output coordinates. Assuming SCIP-$\lambda$, recovering a preimage for a given hash output requires solving a dense system of multivariate polynomial equations whose structure is determined by the symbolic composition of the underlying maps.
+
+In the absence of exploitable structural shortcuts, generic approaches such as Gr\"obner basis methods, XL-type algorithms, or direct interpolation are expected to exhibit exponential complexity in the relevant security parameter. The symbolic densification induced by repeated composition is intended to suppress sparsity and low-degree structure that could otherwise facilitate such attacks.
+
+We therefore argue that SCH achieves preimage resistance under SCIP-$\lambda$ and standard sponge-based reasoning.
+
+
+
+\subsection{Collision Resistance}
+
+Collision resistance in SCH similarly depends on the difficulty of solving systems of polynomial equations corresponding to $P(x) = P(x')$ for distinct inputs $x \neq x'$. Under SCIP-$\lambda$, such systems are expected to behave comparably to random dense multivariate systems of similar dimension and degree.
+
+Within the sponge framework, generic collision attacks are bounded by the birthday bound on the capacity parameter, provided that the internal permutation does not admit efficient algebraic collision-finding strategies. The compositional structure of $P$ is designed to induce rapid degree growth and strong variable interaction, thereby discouraging low-complexity collision attacks that exploit algebraic structure.
+
+As with preimage resistance, collision resistance is therefore argued conditionally on SCIP-$\lambda$ and generic assumptions about multivariate system hardness.
+
+
+
+\subsection{Resistance to Generic Algebraic Attacks}
+
+Algebraic attacks on polynomial-based constructions typically exploit low degree, sparsity, or structural regularities in the underlying system of equations. In SCH, symbolic composition of nonlinear triangular maps with affine mixing layers is intended to counteract these weaknesses by inducing dense coordinate polynomials and rapid degree growth.
+
+While a complete complexity analysis of Gr\"obner basis or XL attacks is beyond the scope of this work, existing results on random and semi-structured multivariate systems suggest that systems with high degree and dense variable interaction rapidly exceed practical solvability thresholds. SCH aims to operate in this regime by construction, although rigorous bounds on degree growth and system hardness remain an open problem.
+
+
+
+\subsection{Reduced-Round and Structural Attacks}
+
+As with most permutation-based constructions, reduced-round variants of SCH may admit distinguishers or attacks that exploit insufficient diffusion or incomplete degree growth. The composition depth $k$, therefore, plays a critical role in achieving full algebraic complexity.
+
+This work does not claim resistance against all reduced-round attacks. Instead, it emphasizes that sufficient composition depth is required for the symbolic composition to induce the intended algebraic hardness. Empirical observations regarding degree growth and diffusion across multiple composition depths are presented in Section~\ref{sec:evaluation}.
+
+
+
+\subsection{Summary of Security Guarantees}
+
+In summary, the security of Symbolic Composition Hashing rests on the following conditional guarantees:
+
+\begin{itemize}
+  \item Preimage resistance under the SCIP-$\lambda$ assumption and standard sponge arguments.
+  \item Collision resistance under SCIP-$\lambda$ and generic multivariate hardness assumptions.
+  \item Resistance to generic algebraic attacks due to symbolic densification and degree growth induced by composition.
+\end{itemize}
+
+These guarantees are heuristic and intended to motivate further cryptanalytic study rather than to serve as definitive proofs. Establishing tighter bounds, concrete security estimates, and resistance against specialized attacks remains an important direction for future work.
+
+
+
+
+\section{Implementation}
+\label{sec:implementation}
+
+We provide a complete reference implementation of \emph{Symbolic Composition Hashing (SCH)} in Python. The implementation is intended to serve as a clear, readable, and reproducible realization of the construction specified in Sections~\ref{sec:construction} and~\ref{sec:spec}, rather than as a performance-optimized system.
+
+All arithmetic is performed over a publicly specified prime field $\mathbb{F}_p$, with field operations implemented directly in Python. Affine layers use matrices $M_i \in \mathrm{SL}_n(\mathbb{F}_p)$ with $\det(M_i)=1$, and follow the structure defined in Section~\ref{sec:spec}. Message absorption, padding, and domain separation are implemented exactly as specified in the theoretical construction.
+
+Round constants $(M_i, \mathbf{b}_i, g_{i,j})$ are derived deterministically from a public seed (e.g., \texttt{``SCH-v1.0''}) using SHAKE256 as an extensible-output function. SHAKE256 is used solely as a public, deterministic constant generator and does not contribute to the cryptographic security of SCH itself. The seed-expansion process is fully deterministic and ensures that all constants are publicly verifiable and reproducible.
+
+The reference implementation includes command-line utilities, test scripts, and evaluation tools designed to reproduce the empirical measurements discussed in the paper. Optimized implementations in other languages or execution environments are left as future work.
+
+The full source code and supporting artifacts are publicly available at:
+Code repository: \url{https://github.com/saimonahmed/schash}.
+
+
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+This section presents an empirical evaluation of the Symbolic Composition Hashing (SCH) framework using the canonical instantiation described in Section~\ref{sec:construction}. The goal of this evaluation is not to establish concrete security bounds, but rather to illustrate structural trends such as algebraic degree growth and diffusion behavior as a function of composition depth.
+
+All experiments reported here are exploratory and intended to support the qualitative security arguments made in Section~\ref{sec:security}. Comprehensive cryptanalysis and large-scale parameter studies are left for future work.
+
+\subsection{Experimental Setup}
+
+Experiments are conducted over prime fields $\Fp$ with varying state dimensions $n$ and composition depths $k$. For each configuration, the composed permutation $P$ is constructed symbolically by iterated composition of affine and triangular maps as specified in Sections~\ref{sec:construction} and~\ref{sec:spec}.
+
+The symbolic polynomial representation of $P$ is obtained via explicit substitution, and structural metrics such as algebraic degree and variable interaction are extracted from the resulting coordinate polynomials. All measurements are performed on the symbolic representation rather than on numerical evaluations.
+
+\subsection{Algebraic Degree Growth}
+
+A primary indicator of algebraic complexity in SCH is the growth of algebraic degree under composition. For each composition depth $k$, we measure the total degree of the coordinate polynomials of $P$.
+
+Figure~\ref{fig:degree-growth} illustrates the observed degree growth as a function of the number of composition layers. Even for moderate values of $k$, the degree increases rapidly, reflecting the nonlinear interaction induced by alternating triangular and affine maps.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figure1_degree_growth.png}
+  \caption{Algebraic degree growth of the composed permutation $P$ as a function of composition depth $k$ for the canonical SCH instantiation.}
+  \label{fig:degree-growth}
+\end{figure}
+
+These observations support the intuition that symbolic composition leads to rapid algebraic densification, which is a desirable property for resistance against algebraic and interpolation-based attacks.
+
+\subsection{Diffusion and Variable Interaction}
+
+To assess diffusion, we examine the extent to which individual input variables influence multiple output coordinates after successive compositions. Specifically, we track the number of variables appearing in each coordinate polynomial of $P$ as the composition depth $k$ increases.
+
+Figure~\ref{fig:diffusion} summarizes the diffusion behavior observed across multiple experimental configurations. As composition depth increases, each output coordinate rapidly becomes a function of nearly all input variables, indicating strong mixing and diffusion.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figure2_diffusion.png}
+  \caption{Diffusion behavior measured as the number of input variables influencing each coordinate of the composed permutation $P$ across composition depths.}
+  \label{fig:diffusion}
+\end{figure}
+
+Strong diffusion is a critical prerequisite for resistance to reduced-round and structural attacks in permutation-based constructions.
+
+\subsection{Structural Density}
+
+In addition to degree and diffusion, we examine the symbolic density of the coordinate polynomials, measured by the number of nonzero monomials appearing in each output coordinate. Symbolic density provides a coarse indicator of resistance to attacks that exploit sparsity or low-degree structure.
+
+Preliminary measurements indicate that symbolic density increases sharply with composition depth, leading to dense multivariate systems even for relatively small values of $k$. This behavior is consistent with the design goal of suppressing sparse representations that may be exploitable by algebraic solvers.
+
+\subsection{Discussion}
+
+The experimental results presented above are consistent with the intended design principles of SCH. Symbolic composition induces rapid algebraic degree growth, strong diffusion, and increasing structural density, all of which contribute to the heuristic hardness assumptions underlying the construction.
+
+We emphasize that these results are illustrative rather than definitive. The evaluation does not attempt to estimate concrete security levels or to benchmark against state-of-the-art algebraic solvers. Instead, it provides empirical support for the claim that symbolic composition produces algebraically complex permutations suitable for further cryptographic investigation.
+
+\subsection{Limitations}
+
+The scope of this evaluation is limited in several respects. Experiments are conducted on modest parameter sizes due to the computational cost of symbolic expansion, and no direct cryptanalytic attacks are implemented. Additionally, the relationship between observed structural metrics and concrete attack complexity remains an open question.
+
+Addressing these limitations through large-scale experimentation, solver-based cryptanalysis, and parameter optimization constitutes an important direction for future work.
+
+
+
+\section{Applications}
+\label{sec:apps}
+
+
+The algebraic nature of Symbolic Composition Hashing (SCH) allows integration
+into diverse environments that benefit from verifiable and field-native
+operations.  We highlight three representative domains.
+
+\subsection{Software Artifact Integrity}
+
+In reproducible-build systems such as \texttt{in-toto} and \texttt{Sigstore},
+hashes are used to bind binaries and metadata.  SCH offers an alternative to
+bit-oriented functions like SHA-2 or BLAKE3 by providing algebraically
+structured outputs directly over $\mathbb{Z}_p$.  This enables unified integrity
+verification in protocols that already employ finite-field arithmetic, such as
+zero-knowledge proof systems or verifiable computation frameworks.
+
+\subsection{Field-Native Hashing for ZK Systems}
+
+Many modern zk-SNARK circuits operate over large prime fields, and bitwise
+hashes require costly bit-decomposition.  Because SCH operates natively on
+$\mathbb{Z}_p$, it avoids such overhead.  This makes it suitable for in-circuit
+commitments, Merkle tree hashing, and polynomial commitments where Poseidon,
+Rescue, and Griffin are commonly used. At comparable state sizes, the arithmetic depth of SCH rounds is similar to Poseidon-style constructions, though SCH emphasizes symbolic densification rather than minimal S-box count. Preliminary constraint counts indicate comparable efficiency with similar algebraic depth but higher diffusion.
+
+\subsection{Composable Random Oracles}
+
+The invertible structure of $P$ makes SCH a candidate permutation for sponge
+and duplex modes requiring strong diffusion and re-keying capabilities, such as
+verifiable randomness beacons or deposit-token registries.  Its determinism and
+public parameter generation process facilitate transparent audits in
+decentralized environments.
+
+\section{Conclusion and Limitations}
+\label{sec:conclusion}
+
+This work introduced \emph{Symbolic Composition Hashing (SCH)}, a foundational algebraic framework for constructing cryptographic hash functions over finite fields based on the symbolic composition of affine and triangular polynomial maps. Rather than proposing a single fixed design, SCH defines a broad family of permutation-based constructions whose security properties arise from algebraic complexity induced by composition.
+
+To support analysis of this framework, we formalized the \emph{Symbolic Composition Inversion Problem (SCIP)}, which captures the difficulty of inverting or colliding symbolically composed polynomial permutations. Under this assumption and standard sponge-based reasoning, SCH provides a conceptual basis for preimage and collision resistance rooted in algebraic structure rather than ad hoc design choices. Structural analysis and preliminary experimental evaluation demonstrate rapid algebraic degree growth, strong diffusion, and increasing symbolic density as composition depth increases.
+
+The primary contribution of this work lies in establishing a new algebraic perspective on hash construction that connects symbolic composition, multivariate hardness, and permutation-based cryptography. By framing security in terms of compositional algebraic complexity, SCH opens a range of new research directions at the intersection of cryptography and computational algebra.
+
+\paragraph{Limitations and Future Work.}
+The results presented in this paper are exploratory and subject to several limitations. First, the security arguments rely on the SCIP assumption and heuristic reasoning about generic algebraic attacks; no reductions to established hardness problems or concrete security bounds are provided. Second, the experimental evaluation is limited to modest parameter sizes due to the computational cost of symbolic expansion, and no solver-based cryptanalysis is performed. Third, rigorous bounds on algebraic degree growth and formal relationships between observed structural metrics and attack complexity remain open.
+
+Addressing these limitations constitutes an important direction for future research. Potential avenues include deeper theoretical analysis of degree growth under symbolic composition, systematic cryptanalytic evaluation using modern algebraic solvers, refined parameter selection strategies, and exploration of alternative composition patterns or map families. More broadly, the SCH framework invites further study into how symbolic algebraic structure can be leveraged as a source of cryptographic hardness in hash functions and related primitives.
+
+
+
+\section*{Acknowledgments}
+
+The author expresses sincere gratitude to \textbf{Professor Lavinia Ciungu}
+for her continuous guidance, mentorship, and valuable feedback throughout the
+development of this research. Her insights on algebraic structure and symbolic
+computation were instrumental in shaping both the theoretical and experimental
+aspects of this work.
+
+Additional thanks are extended to colleagues from the St.~Francis College
+Mathematics and Computer Science community for helpful discussions on
+polynomial cryptography and field-based implementations.  
+All remaining errors are solely the author’s responsibility.
+
+\vspace{1em}
+This research was conducted under the supervision of Professor Lavinia Ciungu
+as part of ongoing work on algebraic cryptographic primitives bridging symbolic
+computation and applied finite-field cryptography.  
+Source code, constant files, and experimental scripts are publicly available at:
+
+\begin{center}
+\href{https://github.com/saimonahmed/schash}{\texttt{github.com/saimonahmed/schash}}
+\end{center}
+
+\begin{thebibliography}{99}
+
+\bibitem{Poseidon}
+L. Grassi, D. Khovratovich, C. Rechberger, A. Roy, and M. Schofnegger,
+``Poseidon: A New Hash Function for Zero-Knowledge Proof Systems,''
+in \emph{Proceedings of the 30th USENIX Security Symposium},
+USENIX Association, 2021, pp. 3235--3252.
+
+\bibitem{Rescue}
+A. Aly, T. Ashur, E. Ben-Sasson, S. Dospinescu, and A. Szepieniec,
+``Rescue: A Hash Function for Zero-Knowledge Proof Systems,''
+\emph{IACR Transactions on Cryptographic Hardware and Embedded Systems (TCHES)},
+vol. 2020, no. 4, pp. 1--28, 2020.
+
+\bibitem{MiMC}
+M. R. Albrecht, L. Grassi, C. Rechberger, A. Roy, and T. Tiessen,
+``MiMC: Efficient Encryption and Cryptographic Hashing with Minimal
+Multiplicative Complexity,''
+in \emph{Advances in Cryptology -- ASIACRYPT 2016},
+LNCS vol. 10031, Springer, 2016, pp. 191--219.
+
+\bibitem{Griffin}
+S. Sadeghi and N. Bagheri,
+``Griffin: A New Symmetric Cryptographic Primitive for Zero-Knowledge Proofs,''
+\emph{IACR Transactions on Cryptographic Hardware and Embedded Systems (TCHES)},
+vol. 2022, no. 3, pp. 1--28, 2022.
+
+\bibitem{MQSurvey}
+J. Ding and D. Schmidt,
+\emph{Multivariate Public Key Cryptography},
+Springer, 2006.
+
+\bibitem{KeccakFIPS202}
+NIST,
+``FIPS 202: SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions,''
+Federal Information Processing Standards Publication 202,
+U.S. Department of Commerce, 2015.
+
+\bibitem{SHA2}
+NIST,
+``FIPS 180-4: Secure Hash Standard (SHS),''
+Federal Information Processing Standards Publication 180-4,
+U.S. Department of Commerce, 2015.
+
+\bibitem{BLAKE3}
+J.-P. Aumasson, S. Neves, Z. Wilcox-O'Hearn, and M. O. Farrell,
+``BLAKE3: One Function, Fast Everywhere,''
+\emph{Cryptology ePrint Archive}, Report 2020/1143, 2020.
+Available at \url{https://eprint.iacr.org/2020/1143}.
+
+\bibitem{Grover}
+L. K. Grover,
+``A Fast Quantum Mechanical Algorithm for Database Search,''
+in \emph{Proceedings of the 28th Annual ACM Symposium on Theory of Computing (STOC)},
+1996, pp. 212--219.
+
+\bibitem{XL}
+N. Courtois, A. Klimov, J. Patarin, and A. Shamir,
+``Efficient Algorithms for Solving Overdefined Systems of Multivariate Polynomial
+Equations,''
+in \emph{Advances in Cryptology -- EUROCRYPT 2000},
+LNCS vol. 1807, Springer, 2000, pp. 392--407.
+
+\bibitem{F4F5}
+J.-C. Faug\`ere,
+``A New Efficient Algorithm for Computing Gr\"obner Bases (F4),'' 
+\emph{Journal of Pure and Applied Algebra},
+vol. 139, no. 1--3, pp. 61--88, 1999.
+
+\bibitem{F5}
+J.-C. Faug\`ere,
+``A New Efficient Algorithm for Computing Gr\"obner Bases without Reduction to Zero (F5),''
+in \emph{Proceedings of the 2002 International Symposium on Symbolic and Algebraic Computation (ISSAC)},
+ACM, 2002, pp. 75--83.
+
+\end{thebibliography}
+
+
+
+\end{document}
