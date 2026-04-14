@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from sch.params import get_params
+from sch.params import get_params, PARAMS
 from sch.sponge import sch_hash
 
 
@@ -24,27 +24,39 @@ def deterministic_bytes(length: int) -> bytes:
     return bytes(out[:length])
 
 
+MESSAGES = {
+    "empty": b"",
+    "abc": b"abc",
+    "hello_world": b"Hello, World!",
+    "zeros_64": b"\x00" * 64,
+    "ones_256": b"\xff" * 256,
+    "rand1k": deterministic_bytes(1024),
+    "rand4k": deterministic_bytes(4096),
+}
+
+
 def dump_vectors() -> Dict[str, Dict[str, list[int]]]:
-    messages = {
-        "empty": b"",
-        "abc": b"abc",
-        "rand1k": deterministic_bytes(1024),
-    }
     results: Dict[str, Dict[str, list[int]]] = {}
-    for params_name in ["sch128"]:
-        params = get_params(params_name)
+    for params_name, params in PARAMS.items():
+        if params.toy:
+            continue
+        print(f"  Generating vectors for {params_name}...")
         per_param: Dict[str, list[int]] = {}
-        for label, msg in messages.items():
+        for label, msg in MESSAGES.items():
             per_param[label] = sch_hash(msg, params)
         results[params_name] = per_param
     return results
 
 
 def main() -> None:
+    print("Generating test vectors for all parameter sets...")
     vectors = dump_vectors()
-    out_path = Path("tests/test_vectors_generated.json")
+    out_path = ROOT / "tests" / "test_vectors_generated.json"
     out_path.write_text(json.dumps(vectors, indent=2))
     print(f"Vectors written to {out_path}")
+    print(f"Parameter sets: {list(vectors.keys())}")
+    for name, vecs in vectors.items():
+        print(f"  {name}: {len(vecs)} messages")
 
 
 if __name__ == "__main__":

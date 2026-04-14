@@ -9,6 +9,82 @@ from typing import Dict
 from .params import SCHParams
 
 
+# ---------------------------------------------------------------------------
+# Shared complexity-estimation helpers — used by both security_analysis.py
+# and cryptanalysis.py so that every table in the paper comes from one
+# formula.
+# ---------------------------------------------------------------------------
+
+def _binomial(n: int, k: int) -> int:
+    """Exact binomial coefficient C(n, k)."""
+    if k > n or k < 0:
+        return 0
+    if k == 0 or k == n:
+        return 1
+    k = min(k, n - k)
+    result = 1
+    for i in range(k):
+        result = result * (n - i) // (i + 1)
+    return result
+
+
+def estimated_degree(d_tri: int, k: int, p: int) -> int:
+    """Upper bound on the total degree of P after *k* composition rounds.
+
+    Each unitriangular layer has coordinate degree <= d_tri and each affine
+    layer preserves degree, so one round multiplies the degree by at most
+    d_tri.  The degree is capped at p (the field size).
+    """
+    return min(d_tri ** k, p)
+
+
+def dreg_estimate(n: int, d: int) -> int:
+    """Heuristic degree-of-regularity for n equations of degree d in n vars.
+
+    Uses the semi-regular (Macaulay) bound
+        D_reg = floor( n(d - 1) / 2 ) + 1
+    following Bardet, Faugère, Salvy & Yang (2004/2005).
+
+    For very high d this is dominated by d*n/2; for d=2 it gives roughly n/2+1,
+    which agrees with known random quadratic benchmarks.
+    """
+    return n * (d - 1) // 2 + 1
+
+
+def groebner_log2_complexity(n: int, d: int, p: int, omega: float = 2.8) -> float:
+    """Estimated log2 of Gröbner-basis attack complexity.
+
+    complexity ≈ C(n + D_reg, D_reg)^ω   (field operations)
+
+    where D_reg is the semi-regular degree-of-regularity bound and ω is the
+    linear-algebra exponent (2.37 ≤ ω ≤ 3; we use 2.8 conservatively).
+
+    The result is capped at n·log2(p) (exhaustive search).
+    """
+    dreg = dreg_estimate(n, d)
+    mono = _binomial(n + dreg, dreg)
+    if mono <= 0:
+        return 0.0
+    bits = math.log2(mono) * omega
+    max_bits = n * math.log2(p)
+    return min(bits, max_bits)
+
+
+def interpolation_log2_complexity(n: int, d: int, p: int, omega: float = 2.8) -> float:
+    """Estimated log2 of interpolation-attack complexity.
+
+    The attacker must solve for the coefficients of P, which lives in a
+    space of dimension C(n + d, d).  The system is solved via linear
+    algebra, so the cost is roughly C(n + d, d)^ω.
+    """
+    mono = _binomial(n + d, d)
+    if mono <= 0:
+        return 0.0
+    bits = math.log2(mono) * omega
+    max_bits = n * math.log2(p)
+    return min(bits, max_bits)
+
+
 @dataclass
 class SecurityEstimate:
     """Security level estimates for a parameter set."""
@@ -47,40 +123,13 @@ def estimate_security_level(params: SCHParams) -> SecurityEstimate:
     preimage_bits = params.c * log2_p  # Capacity-based preimage resistance
     
     # Algebraic system characteristics after k rounds
-    # Conservative estimate: degree grows roughly as d^k for triangular composition
-    estimated_degree = min(params.d_tri ** params.k, params.p)
+    deg = estimated_degree(params.d_tri, params.k, params.p)
     
-    # Number of monomials up to degree d in n variables: C(n+d, d)
-    def binomial(n: int, k: int) -> int:
-        if k > n or k < 0:
-            return 0
-        if k == 0 or k == n:
-            return 1
-        k = min(k, n - k)
-        result = 1
-        for i in range(k):
-            result = result * (n - i) // (i + 1)
-        return result
+    # Interpolation attack
+    interp = interpolation_log2_complexity(params.n, deg, params.p)
     
-    # Monomial count grows combinatorially with degree
-    monomial_count = binomial(params.n + estimated_degree, estimated_degree)
-    
-    # Interpolation attack: need to solve for coefficients
-    # Complexity is roughly O(m^omega) where m is monomial count
-    # Using omega ≈ 2.8 (Strassen-like matrix multiplication)
-    omega = 2.8
-    interpolation_complexity = math.log2(max(monomial_count, 1)) * omega
-    
-    # Gröbner basis complexity (very rough estimate using Dreg bound)
-    # For regular sequences: Dreg ~ d*n, complexity ~ O(n * binomial(n + Dreg, Dreg))
-    dreg_bound = min(estimated_degree * params.n, params.p)
-    groebner_monomials = binomial(params.n + dreg_bound, dreg_bound)
-    groebner_complexity = math.log2(max(groebner_monomials, 1)) * omega
-    
-    # Cap at field size (exhaustive search ceiling)
-    max_complexity = params.n * log2_p
-    interpolation_complexity = min(interpolation_complexity, max_complexity)
-    groebner_complexity = min(groebner_complexity, max_complexity)
+    # Gröbner basis attack
+    grob = groebner_log2_complexity(params.n, deg, params.p)
     
     # Target security level based on capacity
     target_security = min(128, int(collision_bits))
@@ -93,10 +142,10 @@ def estimate_security_level(params: SCHParams) -> SecurityEstimate:
         params_name=params.name,
         collision_bits=collision_bits,
         preimage_bits=preimage_bits,
-        interpolation_complexity=interpolation_complexity,
-        groebner_complexity=groebner_complexity,
+        interpolation_complexity=interp,
+        groebner_complexity=grob,
         num_variables=params.n,
-        max_degree=estimated_degree,
+        max_degree=deg,
         num_equations=params.n,
         target_security=target_security,
         margin_collision=margin_collision,

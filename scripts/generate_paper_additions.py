@@ -8,7 +8,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from sch.security_analysis import analyze_all_parameters, print_security_summary
-from sch.cryptanalysis import run_cryptanalysis_suite, print_attack_summary
+from sch.cryptanalysis import run_complexity_estimates, print_attack_summary
 from sch.params import PARAMS
 
 

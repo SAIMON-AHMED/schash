@@ -33,15 +33,20 @@ class SCHSponge:
         self.state = self._initial_state()
 
     def absorb_elements(self, elements: Sequence[int]) -> None:
-        for alpha in elements:
-            self.state[0] = self.field.add(self.state[0], alpha % self.field.p)
+        r = self.params.r
+        for block_start in range(0, len(elements), r):
+            block = elements[block_start : block_start + r]
+            for i, alpha in enumerate(block):
+                self.state[i] = self.field.add(self.state[i], alpha % self.field.p)
             self.state = self.permutation.apply(self.state)
 
     def squeeze_elements(self, count: int) -> List[int]:
         outputs: List[int] = []
-        for idx in range(count):
-            outputs.append(self.state[0])
-            if idx + 1 < count:
+        while len(outputs) < count:
+            # Extract up to r elements from the rate portion
+            take = min(self.params.r, count - len(outputs))
+            outputs.extend(self.state[:take])
+            if len(outputs) < count:
                 self.state = self.permutation.apply(self.state)
         return outputs
 

@@ -51,3 +51,35 @@ def field_from_params(params: "SCHParams") -> PrimeField:
     """Helper to construct a PrimeField from a parameter object."""
 
     return PrimeField(params.p)
+
+
+def modular_det(matrix: list[list[int]], p: int) -> int:
+    """Compute the determinant of a square integer matrix modulo prime *p*."""
+    size = len(matrix)
+    work = [[entry % p for entry in row] for row in matrix]
+    det = 1
+    for pivot_idx in range(size):
+        pivot_row = None
+        for row_idx in range(pivot_idx, size):
+            if work[row_idx][pivot_idx] % p:
+                pivot_row = row_idx
+                break
+        if pivot_row is None:
+            return 0
+        if pivot_row != pivot_idx:
+            work[pivot_idx], work[pivot_row] = work[pivot_row], work[pivot_idx]
+            det = (-det) % p
+        pivot_val = work[pivot_idx][pivot_idx] % p
+        det = (det * pivot_val) % p
+        inv_pivot = pow(pivot_val, -1, p)
+        for col_idx in range(pivot_idx, size):
+            work[pivot_idx][col_idx] = (work[pivot_idx][col_idx] * inv_pivot) % p
+        for row_idx in range(pivot_idx + 1, size):
+            factor = work[row_idx][pivot_idx]
+            if factor == 0:
+                continue
+            for col_idx in range(pivot_idx, size):
+                work[row_idx][col_idx] = (
+                    work[row_idx][col_idx] - factor * work[pivot_idx][col_idx]
+                ) % p
+    return det % p

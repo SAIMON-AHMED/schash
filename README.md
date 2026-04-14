@@ -6,20 +6,34 @@ Reference Python implementation of Symbolic Composition Hashing over prime field
 
 ```
 sch/
-  field.py          # modular arithmetic helpers
-  encoding.py       # Section 5.2 encoding + padding + packing
-  triangular.py     # lower unitriangular maps T_i
-  affine.py         # determinant-1 affine layers A_i
-  permutation.py    # round composition P = f_k ⚬ ... ⚬ f_1
-  sponge.py         # sponge absorb/squeeze logic
-  params.py         # published parameter sets + toy example
-  __main__.py       # CLI (`python -m sch ...`)
+  field.py              # modular arithmetic helpers + shared modular_det
+  encoding.py           # Section 5.2 encoding + padding + packing
+  constants.py          # SHAKE256 deterministic constant generation
+  triangular.py         # lower unitriangular maps T_i
+  affine.py             # determinant-1 affine layers A_i
+  permutation.py        # round composition P = f_k ⚬ ... ⚬ f_1
+  degree_tracking.py    # polynomial degree tracking utilities
+  sponge.py             # sponge absorb/squeeze logic
+  params.py             # published parameter sets + toy example
+  security_analysis.py  # security level estimates and parameter analysis
+  cryptanalysis.py      # attack complexity estimates
+  __main__.py           # CLI (`python -m sch ...`)
 scripts/
-  bench.py          # throughput benchmark numbers from paper abstract
-  plots.py          # reproduces Figure 1 (degree growth) & Figure 2 (diffusion)
-  gen_vectors.py    # helper to regenerate deterministic test vectors
+  bench.py                  # throughput benchmark numbers from paper abstract
+  bench_detailed.py         # detailed per-operation benchmark
+  benchmark_comparison.py   # comparison with SHA3 and Poseidon
+  plots.py                  # reproduces Figure 1 (degree growth) & Figure 2 (diffusion)
+  differential_analysis.py  # detailed and aggregate differential/statistical sanity checks
+  formal_verification.py    # determinant-one and unitriangular validation
+  generate_tables.py        # generate LaTeX tables for the paper
+  generate_paper_additions.py # paper supplementary data generation
+  groebner_experiment.py    # reduced-instance Gröbner basis experiments
+  linear_analysis.py        # linear bias screening for reduced/full rounds
+  higher_order_diff.py      # higher-order differential screening
+  export_system.py          # export polynomial systems to Sage/Magma format
+  gen_vectors.py            # helper to regenerate deterministic test vectors
 tests/
-  test_vectors.py   # pytest regression suite (vectors + invariants)
+  test_vectors.py           # pytest regression suite (vectors + invariants)
 ```
 
 ## Finite field arithmetic
@@ -46,10 +60,10 @@ Each round `f_i = A_i ⚬ T_i` consists of:
 
 ## Sponge hashing interface
 
-`sch/sponge.py` implements the absorb/squeeze rules exactly as in Section 5.2:
+`sch/sponge.py` implements a standard rate-`r` sponge as described in Section 5.2:
 
-- Absorb: add each packed element into `s[0]`, then apply `P`.
-- Squeeze: output `s[0]`, applying `P` between outputs.
+- Absorb: chunk packed elements into blocks of `r`, XOR each block into `s[0:r]`, then apply `P`.
+- Squeeze: output up to `r` elements from `s[0:r]`, applying `P` between blocks.
 - Optional byte digests come from serialising field outputs into `B` little-endian bytes.
 
 Use it directly via `sch.sponge.sch_hash(message, params, out_elements=None, out_bytes=None)`.
@@ -92,21 +106,27 @@ Then reproduce the paper-style artefacts:
 ```bash
 python scripts/bench.py                # same as `python -m sch bench`
 python scripts/plots.py --params sch128 --output plots/
+python scripts/differential_analysis.py --params sch128 --trials 128 --samples 128 --message-bytes 64
+python scripts/differential_analysis.py --params all --paper-profile --summary-only
 ```
 
 `plots.py` tracks algebraic degree through actual sampled rounds and runs an avalanche experiment (flip one input bit, measure differing digest bits) to approximate the diffusion curve.
+`differential_analysis.py` measures reduced-round coordinate/bit propagation under single-coordinate perturbations, reports a simple output-bit balance sanity check for the full SCH hash, and can emit the paper's aggregate full-round summary across `sch128`, `sch192`, and `sch256`.
 
 ## Tests & reproducibility
 
 1. Install pytest if needed: `python -m pip install pytest`.
-2. Run `pytest` from the repository root.
+2. Run `python -m pytest` from the repository root.
+
+`pytest.ini` restricts collection to `tests/`, so vendored third-party repositories under `vendor/` do not get pulled into the project test run.
 
 The suite covers:
 
-- Deterministic vectors for `sch128` (`m = empty`, `m = "abc"`, `m = 1 KiB` pseudo-random).
+- Known-answer vectors for `sch128`, `sch192`, and `sch256` (`m = empty`, `m = "abc"`).
+- Cross-validation of the generated `sch128` JSON vectors across a larger message set.
 - Brute-force bijectivity of the toy permutation (`31^3` states).
 - Explicit Jacobian determinant checks for the toy permutation.
-- Determinant-one validation for every affine layer in `sch128`.
+- Determinant-one and unitriangular-structure validation for every published parameter set via `python scripts/formal_verification.py`.
 
 To regenerate the stored vectors after any intentional change:
 

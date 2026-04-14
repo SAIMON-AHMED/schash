@@ -1,47 +1,49 @@
-\documentclass[11pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+﻿\documentclass[english]{aucmcs}
 
-\usepackage{amsmath,amssymb,amsthm,bm}
-\usepackage{graphicx,tabularx,booktabs,siunitx,float}
+\volume{37(1)} \year{2026} \issn{1223-6934} \pagespan{1}{20}
+
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{colortbl}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{tabularx,booktabs,float}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \SetKwComment{Comment}{$\triangleright$\ }{}
+\usepackage[colorlinks=true,allcolors=blue,bookmarks=true,pdfborder={0 0 0}]{hyperref}
 
-\usepackage{url}
-\usepackage[colorlinks=true,allcolors=blue]{hyperref}
-\usepackage{cite}
-
-\graphicspath{{.}{figs/}}
+\graphicspath{{.}}
 
 \newcommand{\Fp}{\mathbb{F}_p}
 \newcommand{\Fpn}{\mathbb{F}_p^n}
 
 \DeclareMathOperator{\deggr}{deg}
 
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}[section]
 \newtheorem{assumption}{Assumption}[section]
 
+\title[Symbolic Composition Hashing]{Symbolic Composition Hashing: An Algebraic Sponge over Finite Fields with ZK-Friendly Structure}
+
+\author[S. Ahmed]{Saimon Ahmed}
+
+\address[Saimon Ahmed]{Independent Researcher}
+\email{saimon.ahmed@schash.dev}
 
 \begin{document}
 
-\title{Symbolic Composition Hashing: An Algebraic Sponge over Finite Fields with ZK-Friendly Structure}
-\author{Saimon Ahmed}
-\maketitle
-\onecolumn
-\normalsize
-
-
 \begin{abstract}
-We introduce \emph{Symbolic Composition Hashing (SCH)}, a new algebraic framework for constructing cryptographic hash functions over finite fields based on the symbolic composition of triangular and affine polynomial maps. The construction defines a broad family of permutation-based designs whose security is governed by the algebraic complexity of the resulting multivariate systems.  
-
-To capture this complexity, we formalize the \emph{Symbolic Composition Inversion Problem (SCIP)}, a hardness assumption describing the difficulty of inverting or colliding composed polynomial permutations when only their symbolic representation is available. Under SCIP and standard sponge-based arguments, SCH provides a general foundation for preimage and collision resistance.  
-
-We analyze structural properties of the construction, including algebraic degree growth, diffusion behavior, and resistance to generic algebraic attacks, and we support these observations with preliminary experimental evaluations. Rather than proposing a finalized hash standard, this work establishes a \emph{foundational algebraic family and hardness framework} intended to support further cryptanalytic study and future cryptographic design.
+We introduce \emph{Symbolic Composition Hashing (SCH)}, a new algebraic framework for constructing cryptographic hash functions over finite fields based on the symbolic composition of triangular and affine polynomial maps. The construction defines a broad family of permutation-based designs whose security is governed by the algebraic complexity of the resulting multivariate systems. To capture this complexity, we formalize the \emph{Symbolic Composition Inversion Problem (SCIP)}, a hardness assumption describing the difficulty of inverting or colliding composed polynomial permutations when only their symbolic representation is available. Under SCIP and standard sponge-based arguments, SCH provides a general foundation for preimage and collision resistance. We analyze structural properties of the construction, including algebraic degree growth, diffusion behavior, and resistance to generic algebraic attacks, and we support these observations with preliminary experimental evaluations. Rather than proposing a finalized hash standard, this work establishes a foundational algebraic family and hardness framework intended to support further cryptanalytic study and future cryptographic design.
 \end{abstract}
 
+\keywords{Cryptographic hash functions; sponge construction; multivariate cryptography; zero-knowledge proofs; finite fields; post-quantum cryptography}
 
-\noindent\textbf{Keywords:} Cryptographic hash functions; sponge construction; multivariate cryptography; zero-knowledge proofs; finite fields; post-quantum cryptography.
+\subjclass[2010]{Primary 94A60; Secondary 11T99, 68P25.}
+
+\date{\today}
+
+\maketitle
 
 
 
@@ -72,17 +74,67 @@ This paper makes the following contributions:
 \section{Related Work}
 \label{sec:related}
 
-The design of cryptographic hash functions has traditionally been dominated by bit-oriented constructions such as Merkle--Damg{\aa}rd and sponge-based designs, exemplified by standardized primitives including SHA--2 and SHA--3. These constructions rely on carefully engineered Boolean components and round functions to achieve diffusion, nonlinearity, and resistance to differential and algebraic attacks. While highly successful in practice, such designs operate primarily at the bit level and offer limited insight into hash constructions defined natively over algebraic structures such as finite fields.
+\paragraph{Traditional hash functions.}
+Cryptographic hash function design has been dominated by bit-oriented
+constructions.  The Merkle--Damg{\aa}rd paradigm \cite{SHA2} and the
+sponge construction underlying SHA-3/Keccak \cite{KeccakFIPS202}
+process data through Boolean round functions optimised for diffusion and
+nonlinearity.  These designs are extremely fast in software and
+hardware, but operate at the bit level and yield no algebraic structure
+exploitable in proof systems.
 
-In contrast, algebraic and multivariate cryptography has explored the use of polynomial maps over finite fields as a basis for cryptographic primitives, most notably in the context of multivariate public-key cryptosystems. This body of work has produced a rich theory of polynomial transformations, including triangular and affine maps, whose compositional properties are well understood in algebraic geometry and computational algebra. However, these techniques have primarily been applied to encryption and signature schemes rather than to hash function design.
+\paragraph{Arithmetization-oriented hashes.}
+The growth of zero-knowledge proof systems and verifiable computation
+has motivated hash functions defined natively over large prime fields.
+MiMC \cite{MiMC} pioneered this direction with a univariate power map
+iterated over many rounds; its low multiplicative complexity produces
+small arithmetic circuits but limits algebraic degree growth per round.
+The HADES design strategy \cite{HADES} introduced a mix of full and partial
+S-box layers, yielding Poseidon \cite{Poseidon} and its successor
+Poseidon2 \cite{Poseidon2}, which remain the most widely deployed
+arithmetization-friendly hashes.  Rescue \cite{Rescue} alternates
+high- and low-degree power maps for efficient verification in both
+R1CS and AIR representations.  Griffin \cite{Griffin} combines a
+Feistel-like structure with low-degree nonlinearities.  More recent
+designs include Anemoi \cite{Anemoi}, which introduces the ``flystel''
+open butterfly structure, Reinforced Concrete \cite{ReinforcedConcrete},
+which mixes field and decomposition-based nonlinearities, and
+Tip5 \cite{Tip5}, which targets recursive STARKs.
 
-Several works have investigated algebraic hash constructions or permutations defined over finite fields, often motivated by efficiency, structural simplicity, or resistance to specific classes of attacks. Such designs typically fix a concrete polynomial mapping or round function and analyze its behavior under algebraic, differential, or interpolation-based attacks. While these approaches yield valuable insights into specific constructions, they do not generally provide a broader framework in which algebraic hardness arises from structural principles shared across a family of designs.
+\paragraph{Structural commonality.}
+Despite their variety, the constructions above share a common pattern:
+a fixed nonlinear round function is iterated a prescribed number of
+times, and security is argued by analysing algebraic degree growth,
+differential propagation, and resistance to Gr\"obner basis or
+interpolation attacks.  Degree growth is typically driven by a single
+monomial power map ($x^d$ for small $d$) applied coordinate-wise,
+with diffusion provided by an MDS or near-MDS linear layer.
 
-The use of permutation-based hash constructions, particularly sponge and duplex frameworks, has further highlighted the importance of understanding the internal structure of permutations used within hash functions. Prior analyses have shown that diffusion properties, algebraic degree growth, and resistance to generic attacks play a critical role in determining security margins. Nevertheless, most existing work treats the permutation as a black box or analyzes its numerical behavior, rather than focusing on the symbolic structure induced by iterated algebraic composition.
+\paragraph{The SCH approach.}
+The present work departs from this pattern.  Instead of a power-map
+S-box, SCH uses triangular polynomial maps---composed with affine
+layers---to build a permutation whose each component is a dense
+multivariate polynomial.  Because triangular maps contribute degree
+growth \emph{multiplicatively} across rounds (Theorem~\ref{thm:degree-growth}),
+the algebraic degree of the full permutation reaches $d_{\mathrm{tri}}^k$
+after $k$~rounds, yielding rapid growth even for moderate parameters.
+The hardness assumption (SCIP, Definition~\ref{def:scip}) is therefore
+a multivariate polynomial inversion problem rather than a discrete-log
+or power-map assumption, connecting SCH to the MQ problem studied
+in multivariate cryptography \cite{MQSurvey}.
 
-From a cryptanalytic perspective, algebraic attacks on multivariate systems---including Gr\"obner basis methods, XL-type algorithms, and related techniques---provide a natural lens through which to evaluate algebraic hash constructions. The effectiveness of such attacks depends strongly on system parameters such as degree growth, variable density, and the presence or absence of exploitable structure. While extensive literature exists on the complexity of solving random or structured multivariate systems, the implications of symbolic composition for inducing algebraic hardness in hash constructions remain insufficiently explored.
-
-The present work aims to bridge these areas by introducing a general algebraic framework for hash construction based on symbolic composition of polynomial maps. Rather than proposing a single fixed design, we define a family of constructions whose security properties are governed by the algebraic complexity of composition itself. By formalizing the Symbolic Composition Inversion Problem (SCIP), we seek to provide a unifying abstraction that connects algebraic structure, compositional depth, and cryptanalytic hardness, thereby opening new directions for both cryptographic design and algebraic analysis.
+\paragraph{Algebraic attacks.}
+Security against algebraic attacks is bounded by the complexity of
+Gr\"obner basis computation on the resulting polynomial system.
+Faug\`ere's F4 \cite{F4F5} and F5 \cite{F5} algorithms, together
+with the XL family \cite{XL}, are the most efficient known solvers.
+Their complexity is governed by the degree of regularity
+$D_{\mathrm{reg}}$, for which Bardet, Faug\`ere, and Salvy
+\cite{Bardet2005} provide asymptotic estimates under the
+semi-regularity assumption.  We use these bounds to derive
+concrete security estimates (Section~\ref{sec:security}) and
+validate them experimentally on reduced instances
+(Section~\ref{sec:groebner-experiments}).
 
 
 \section{Preliminaries}
@@ -322,27 +374,27 @@ primality testing is not part of the SCH protocol.
 
 \begin{table}[H]
 \centering
-\caption{Representative SCH parameter sets (conservative sizing targets).}
+\caption{SCH parameter sets as implemented in the reference code.}
 \label{tab:params}
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabular}{@{}lccccccc@{}}
 \toprule
-Profile & Prime field $p$ & $\log_2(p)$ & $n$ & $r$ & $c$ & Suggested $k$ \\
+Name & Prime field $p$ & $\log_2(p)$ & $n$ & $r$ & $c$ & $k$ & $d_{\mathrm{tri}}$ \\
 \midrule
-Mini example (Sec.~\ref{sec:worked-example}) &
+\texttt{toy31} (Sec.~\ref{sec:worked-example}) &
 $31$ & $\approx 5$ &
-3 & 2 & 1 & 3 \\
+3 & 2 & 1 & 3 & 3 \\
 
-Toy (non-secure, for testing) &
-$2^{31}-1$ & 31 &
-9 & 6 & 3 & 5 \\
+\texttt{sch128} &
+$2^{127}-1$ & 127 &
+12 & 8 & 4 & 7 & 3 \\
 
-Large-field baseline (highly conservative) &
+\texttt{sch192} &
+$2^{191}-1$ & 191 &
+16 & 10 & 6 & 9 & 3 \\
+
+\texttt{sch256} &
 $2^{255}-19$ & 255 &
-12 & 8 & 4 & 8--12 \\
-
-Large-field higher-capacity (highly conservative) &
-$2^{255}-19$ & 255 &
-16 & 8 & 8 & 10--16 \\
+20 & 12 & 8 & 11 & 4 \\
 \bottomrule
 \end{tabular}
 
@@ -350,23 +402,15 @@ $2^{255}-19$ & 255 &
 \begin{minipage}{0.95\linewidth}
 \small
 \textbf{Notes.}
-State size is $n=r+c$. Under standard sponge heuristics, generic collision work is
-$\approx p^{c/2}$ and generic preimage work is $\approx p^{c}$ (capacity-driven).
-With $p\approx 2^{255}$ and $c=4$, we obtain $p^{c/2}\approx 2^{510}$ and
-$p^{c}\approx 2^{1020}$, which is far above $2^{128}$ and $2^{256}$.
-The round count $k$ is a heuristic security/performance knob and should be
-validated by degree/diffusion experiments and cryptanalysis.
+State size is $n=r+c$; $k$ denotes the number of composition rounds and $d_{\mathrm{tri}}$
+the maximum degree of each unitriangular layer. Under standard sponge heuristics,
+generic collision work is $\approx p^{c/2}$ and generic preimage work is $\approx p^{c}$
+(capacity-driven). For \texttt{sch128} with $\log_2 p=127$ and $c=4$, generic collision
+work is $\approx 2^{254}$, well above the 128-bit target. Higher parameter sets provide
+proportionally larger margins. The \texttt{toy31} set is for illustration only and
+provides no cryptographic security.
 \end{minipage}
 \end{table}
-
-
-
-\paragraph{Toy example.}
-For illustration and worked examples only, we may use
-\[
-p = 2^{31}-1,\quad n = 9,\quad r = 6,\quad c = 3,\quad k = 5 \text{ rounds}.
-\]
-This setting is not intended to represent the recommended security tiers.
 
 \subsection{Encoding and Padding}
 \label{sec:spec-encoding}
@@ -432,14 +476,14 @@ Let
 \paragraph{Rate absorption mapping.}
 Let the sponge state be $s \in \Fp^n$, where $n = r + c$ and the first $r$
 coordinates constitute the rate.
-Each packed element $\alpha_j$ is absorbed by updating
+Packed elements are absorbed in blocks of $r$: for each block
+$(\alpha_{jr},\ldots,\alpha_{jr+r-1})$, update
 \[
-s_1 \leftarrow s_1 + \alpha_j \pmod{p},
+s_i \leftarrow s_i + \alpha_{jr+i-1} \pmod{p}, \quad i = 1,\ldots,r,
 \]
 followed by application of the permutation $P$.
-(Equivalently, absorption may be generalized to multiple rate coordinates; the
-single-coordinate rule above defines the reference encoding used throughout this
-paper for simplicity and reproducibility.)
+If the final block contains fewer than $r$ elements, the remaining rate
+coordinates are left unchanged before applying $P$.
 
 \paragraph{Domain separation.}
 To prevent cross-protocol collisions (e.g., between hashing and PRF-style usage),
@@ -454,14 +498,12 @@ $B$ bytes if necessary.
 All experiments in this paper use $\tau = \mathrm{pack}(\texttt{"SCH"})$.
 
 \paragraph{Squeezing.}
-After absorption, output is produced by reading the first rate coordinate(s) and
+After absorption, output is produced by reading up to $r$ rate coordinates and
 applying $P$ between output blocks, as in the standard sponge construction.
-For a $t$-field-element digest $(z_1,\ldots,z_t)$, define
-\[
-z_i = s_1 \in \Fp,
-\quad \text{then } s \leftarrow P(s),
-\quad \text{for } i = 1,\ldots,t.
-\]
+For a $t$-field-element digest $(z_1,\ldots,z_t)$: extract
+$\min(r,\, t - \text{output so far})$ elements from
+$(s_1,\ldots,s_r)$, then apply $s \leftarrow P(s)$ if more elements are
+needed, and repeat until all $t$ elements have been produced.
 If a byte-string digest is required (e.g., 32 bytes), each $z_i$ is serialized in
 little-endian base-$256$ using exactly $B$ bytes and truncated to the desired
 output length.
@@ -540,6 +582,97 @@ Without access to the internal round decomposition, inverting $P$
 corresponds to solving a dense multivariate polynomial system whose algebraic
 degree and symbolic density grow rapidly as a function of the number of
 rounds~$k$.
+
+
+\subsection{Structural Properties}
+\label{sec:structural-properties}
+
+We now state the main structural results that underpin the security analysis.
+
+\begin{theorem}[Bijectivity and unit Jacobian determinant]
+\label{thm:bijectivity}
+Let $P = A_k \circ T_k \circ \cdots \circ A_1 \circ T_1$ where each
+$T_i : \Fp^n \to \Fp^n$ is a unitriangular polynomial map and each
+$A_i(x) = M_i x + b_i$ with $M_i \in \mathrm{SL}_n(\Fp)$.
+Then $P$ is bijective with $\det(J_P) = 1$ over $\Fp$.
+\end{theorem}
+
+\begin{proof}
+Each $T_i$ is bijective: writing
+\[
+  T_i(x_0, \dots, x_{n-1}) = (x_0 + c_i,\; x_1 + g_{i,1}(x_0),\; \dots,\; x_{n-1} + g_{i,n-1}(x_0, \dots, x_{n-2})),
+\]
+the inverse is recovered uniquely by forward substitution, starting from
+$x_0 = y_0 - c_i$ and then setting
+$x_j = y_j - g_{i,j}(x_0, \dots, x_{j-1})$ for $1 \le j \le n-1$.
+Each affine layer $A_i(x) = M_i x + b_i$ is bijective because
+$M_i \in \mathrm{SL}_n(\Fp)$ is invertible, so
+$A_i^{-1}(y) = M_i^{-1}(y - b_i)$.
+Hence $P$ is bijective as a composition of bijections.
+
+For the Jacobian determinant, each $T_i$ is unitriangular, so its Jacobian
+$J_{T_i}$ is lower-triangular with all diagonal entries equal to $1$; hence
+$\det(J_{T_i}) = 1$. Each $A_i$ has Jacobian $J_{A_i} = M_i$ with
+$\det(M_i) = 1$ by hypothesis. By the chain rule for polynomial maps,
+\[
+  J_P = J_{A_k} \cdot J_{T_k} \cdot J_{A_{k-1}} \cdot J_{T_{k-1}}
+        \cdots J_{A_1} \cdot J_{T_1},
+\]
+so $\det(J_P) = \prod_{i=1}^{k} \det(M_i) \cdot \det(J_{T_i}) = 1$.
+\end{proof}
+
+
+\begin{theorem}[Degree growth bound]
+\label{thm:degree-growth}
+Let each unitriangular map $T_i$ satisfy
+\[
+\max_{1 \le j \le n} \deg(g_{i,j}) \le d_{\mathrm{tri}}.
+\]
+Then the total degree of the composed permutation satisfies
+\[
+  \deg(P) \;\le\; d_{\mathrm{tri}}^{\,k}.
+\]
+\end{theorem}
+
+\begin{proof}
+We proceed by induction on the number of rounds $k$.
+
+\emph{Base case} ($k=1$).
+After one round, $P = A_1 \circ T_1$.
+Each coordinate of $T_1$ has degree at most $d_{\mathrm{tri}}$,
+and $A_1$ is affine (degree~$1$), so
+$\deg(A_1 \circ T_1) \le d_{\mathrm{tri}} = d_{\mathrm{tri}}^1$.
+
+\emph{Inductive step.}
+Suppose that after $k-1$ rounds the composed map has degree at most
+$d_{\mathrm{tri}}^{k-1}$.
+One additional round applies $T_k$ followed by $A_k$.
+Since $T_k$ is unitriangular of degree $d_{\mathrm{tri}}$,
+composing $T_k$ with a map of degree $D$ yields degree at most
+$D \cdot d_{\mathrm{tri}}$ (each variable in $g_{k,j}$ is replaced by a
+polynomial of degree~$\le D$, and $g_{k,j}$ has degree~$\le d_{\mathrm{tri}}$).
+Applying $A_k$ (degree~$1$) preserves this bound.
+Hence
+$\deg(P_k) \le d_{\mathrm{tri}}^{k-1} \cdot d_{\mathrm{tri}} = d_{\mathrm{tri}}^k$.
+\end{proof}
+
+
+\begin{proposition}[Monomial density growth]
+\label{prop:density}
+Let $P_k$ denote the composed permutation after $k$ rounds, and let
+$N_k$ be the number of monomials with non-zero coefficients in an
+arbitrary coordinate polynomial of $P_k$.
+For generic choices of round constants, $N_k$ is non-decreasing in $k$,
+and empirically grows at a rate close to $\binom{n + d_{\mathrm{tri}}^k}{n}$
+(the total number of monomials of degree $\le d_{\mathrm{tri}}^k$ in $n$ variables).
+\end{proposition}
+
+This proposition is supported experimentally by the degree-tracking
+experiments in Section~\ref{sec:evaluation} but a tight lower bound on
+$N_k$ for generic constants remains an open problem.
+We conjecture that, for random round constants, $N_k$ reaches maximal
+density (i.e.\ every monomial up to degree $d_{\mathrm{tri}}^k$ has a non-zero
+coefficient) within $O(n)$ rounds.
 
 
 \section{Worked Example}
@@ -627,8 +760,22 @@ This section analyzes the security properties of Symbolic Composition Hashing (S
 
 We formalize the core hardness assumption underlying SCH.
 
-\paragraph{Definition (Symbolic Composition Inversion Problem, SCIP).}
+\begin{definition}[Symbolic Composition Inversion Problem (SCIP)]
+\label{def:scip}
 Let $P : \Fp^n \to \Fp^n$ be a permutation obtained as a symbolic composition of affine and triangular polynomial maps as defined in Section~\ref{sec:construction}. The \emph{Symbolic Composition Inversion Problem (SCIP)} is the problem of recovering a preimage $x \in \Fp^n$ given an output $y = P(x)$ and only the symbolic polynomial representation of $P$, without access to its compositional decomposition.
+\end{definition}
+
+\paragraph{Connection to MQ and MP.}
+Concretely, an SCIP instance reduces to solving a system of $n$ multivariate
+polynomial equations in $n$ unknowns over $\Fp$. When the total degree of the
+composed permutation is $d = d_{\mathrm{tri}}^k$, the resulting system is an
+instance of the \emph{Multivariate Polynomial} (MP) problem of degree~$d$.
+For $d = 2$ this becomes the well-studied MQ (Multivariate Quadratic) problem,
+which is NP-hard in general \cite{MQSurvey}. Although SCIP instances are not
+random---they arise from iterated composition of structured maps---the
+symbolic densification induced by composition is designed to eliminate
+exploitable structure, so that the system behaves like a generic MP instance
+from the perspective of algebraic solvers.
 
 Variants of SCIP include the task of finding distinct inputs $x \neq x'$ such that $P(x) = P(x')$, corresponding to collision-finding in the induced hash construction.
 
@@ -641,10 +788,31 @@ with standard heuristic hardness assumptions commonly used in multivariate
 cryptography.
 
 
-\paragraph{Assumption (SCIP-$\lambda$).}
+\begin{assumption}[SCIP-$\lambda$]
+\label{asm:scip}
 For security parameter $\lambda$, we assume that for appropriately chosen parameters $(p,n,k)$, solving SCIP for the composed permutation $P$ requires computational effort at least $2^{\Omega(\lambda)}$ for generic algebraic algorithms.
+\end{assumption}
 
 This assumption abstracts the algebraic hardness induced by symbolic composition and serves as the primary foundation for the security analysis that follows.
+
+\paragraph{Comparison with related assumptions.}
+SCIP is structurally analogous to hardness assumptions underlying other
+algebraic hash functions. Poseidon~\cite{Poseidon} relies on the
+assumption that its CICO (Constrained Input Constrained Output) problem
+is hard, which reduces to solving a structured polynomial system arising
+from iterated S-box and MDS composition. MiMC~\cite{MiMC} assumes that
+its composed cubing maps behave like high-degree random polynomials
+despite their sparse univariate structure. Rescue~\cite{Rescue} and
+Griffin similarly depend on algebraic degree growth from iterated
+nonlinear layers resisting Gr\"obner basis attacks.
+Like these assumptions, SCIP does not reduce to a standard worst-case
+problem (MQ, LWE, etc.); instead, it asserts that the specific
+algebraic structure arising from composition is sufficient to defeat
+known generic solvers. The distinctive feature of SCIP is that degree
+growth arises from \emph{dense multivariate} triangular polynomials
+rather than sparse S-boxes, which creates a different (and potentially
+harder) algebraic structure at the cost of higher per-round
+computational overhead.
 
 
 
@@ -712,23 +880,29 @@ Table~\ref{tab:security} presents quantitative security estimates for the propos
 Parameter & Collision & Preimage & Interpolation & Gr\"obner \\
 Set & (bits) & (bits) & Attack (bits) & Attack (bits) \\
 \midrule
-sch128 & 254 & 508 & 292 & 413 \\
-sch192 & 573 & 1146 & 515 & 694 \\
-sch256 & 1020 & 2040 & 1061 & 1303 \\
+sch128 & 254 & 508 & 292 & 379 \\
+sch192 & 573 & 1146 & 515 & 650 \\
+sch256 & 1020 & 2040 & 1061 & 1247 \\
 \bottomrule
 \end{tabular}
 \vspace{0.5em}
 \begin{minipage}{0.95\linewidth}
 \small
-\textbf{Notes.} Security estimates based on generic sponge bounds and algebraic complexity analysis. Interpolation and Gr\"obner basis attack complexities estimated from system degree and variable count. All parameter sets exceed $2^{128}$ security target with substantial margins.
+\textbf{Notes.} Collision and preimage bounds follow standard sponge-capacity arguments.
+Interpolation complexity equals $\omega \cdot \log_2 \binom{n+d}{d}$ where $d = d_{\mathrm{tri}}^k$
+and $\omega = 2.8$ (practical linear-algebra exponent).
+Gr\"obner complexity uses the semi-regular degree-of-regularity bound
+$D_{\mathrm{reg}} = \lfloor n(d-1)/2 \rfloor + 1$ from Bardet et al.\ \cite{Bardet2005},
+with complexity $\omega \cdot \log_2 \binom{n+D_{\mathrm{reg}}}{D_{\mathrm{reg}}}$.
+All estimates are capped at exhaustive search ($n \cdot \log_2 p$).
 \end{minipage}
 \end{table}
 
 All parameter sets provide security margins exceeding the $2^{128}$ target by factors of 2x or greater against both collision and preimage attacks. Algebraic attack complexities (interpolation and Gr\"obner basis methods) exceed $2^{250}$ operations for full-round instantiations, providing substantial security cushions.
 
-The SCH-128 parameter set achieves $2^{254}$ collision resistance and $2^{508}$ preimage resistance through its 4-element capacity over a 127-bit prime field. Algebraic attacks require solving systems with estimated degree exceeding 2000, leading to complexity estimates of $2^{292}$ for interpolation and $2^{413}$ for Gr\"obner basis methods.
+The SCH-128 parameter set achieves $2^{254}$ collision resistance and $2^{508}$ preimage resistance through its 4-element capacity over a 127-bit prime field. Algebraic attacks require solving systems with estimated degree $d = 3^7 = 2187$, leading to complexity estimates of $2^{292}$ for interpolation and $2^{379}$ for Gr\"obner basis methods.
 
-Higher parameter sets (SCH-192 and SCH-256) provide even larger security margins, exceeding $2^{500}$ bits of security against all analyzed attack vectors. These conservative margins account for potential future advances in algebraic solving techniques.
+Higher parameter sets (SCH-192 and SCH-256) provide even larger security margins, exceeding $2^{500}$ bits of collision security. These conservative margins account for potential future advances in algebraic solving techniques.
 
 
 \subsection{Reduced-Round Cryptanalysis}
@@ -742,12 +916,12 @@ We evaluate resistance to algebraic attacks through complexity analysis of reduc
 \label{tab:attacks}
 \begin{tabular}{@{}lccl@{}}
 \toprule
-Rounds & Interpolation & Algebraic & Status \\
+Rounds & Interpolation & Gr\"obner & Status \\
 \midrule
-1/7 & $2^{25}$ & $2^{720}$ & Infeasible \\
-2/7 & $2^{40}$ & $2^{1008}$ & Infeasible \\
-3/7 & $2^{200}$ & $2^{1524}$ & Infeasible \\
-7/7 (Full) & $2^{292}$ & $2^{413}$ & Infeasible \\
+1/7 & $2^{24}$ & $2^{62}$ & Feasible \\
+2/7 & $2^{50}$ & $2^{113}$ & Infeasible \\
+3/7 & $2^{89}$ & $2^{166}$ & Infeasible \\
+7/7 (Full) & $2^{292}$ & $2^{378}$ & Infeasible \\
 \addlinespace
 Upper Bound & \multicolumn{2}{c}{$2^{254}$ (collision)} & Generic \\
 \bottomrule
@@ -755,23 +929,25 @@ Upper Bound & \multicolumn{2}{c}{$2^{254}$ (collision)} & Generic \\
 \vspace{0.5em}
 \begin{minipage}{0.95\linewidth}
 \small
-\textbf{Notes.} Complexity estimates show rapid growth with round count. Even at 1 round, attacks exceed practical feasibility thresholds. Full 7-round version maintains security margins above $2^{250}$ against algebraic methods.
+\textbf{Notes.} Both interpolation and Gr\"obner estimates use the same
+formulas as Table~\ref{tab:security}. At 1--2 rounds, interpolation is
+within practical range ($< 2^{64}$); by 3 rounds both attacks exceed practical thresholds.
 \end{minipage}
 \end{table}
 
 Key observations from reduced-round analysis:
 
 \begin{itemize}
-  \item \textbf{Single-round resistance:} Even 1-round variants resist interpolation attacks due to rapid degree growth ($d_{\text{tri}} = 3$) in the triangular layer. The resulting degree-3 system over 12 variables yields $\approx 2^{25}$ monomials, making interpolation impractical.
+  \item \textbf{1--2 round vulnerability:} At 1~round, both interpolation ($2^{24}$) and Gr\"obner basis ($2^{62}$) attacks are within practical reach. At 2~rounds, interpolation remains feasible ($2^{50}$) while the Gr\"obner estimate ($2^{113}$) approaches but does not exceed 128-bit security. This confirms that at least 3~rounds are needed for security.
   
-  \item \textbf{Super-exponential growth:} Algebraic attack complexity grows super-exponentially with round count. At 2 rounds, degree reaches $\approx 9$, pushing Gr\"obner basis complexity to $2^{1008}$ operations. At 3 rounds, complexity exceeds $2^{1500}$.
+  \item \textbf{Rapid hardening at 3~rounds:} By 3~rounds the system degree reaches $d = 3^3 = 27$, and both attack vectors exceed $2^{89}$ (interpolation) and $2^{166}$ (Gr\"obner). The transition from feasible to infeasible occurs between rounds 2 and 3.
   
-  \item \textbf{Full-round security margins:} The full 7-round SCH-128 maintains security margins of $2^{164}$ bits above the 128-bit target for interpolation attacks and $2^{285}$ bits for Gr\"obner basis attacks, providing substantial security reserves against cryptanalytic improvements.
+  \item \textbf{Full-round security margins:} The full 7-round SCH-128 achieves interpolation complexity $2^{292}$ and Gr\"obner complexity $2^{378}$, both well above the $2^{254}$ generic collision bound. This provides a margin of $2^{164}$ bits above the 128-bit target for interpolation.
   
-  \item \textbf{Comparison to generic attacks:} All algebraic attack estimates exceed the $2^{254}$ generic collision bound, confirming that attack complexity is dominated by the capacity-based generic security rather than structural vulnerabilities.
+  \item \textbf{Comparison to generic attacks:} At full rounds, algebraic attack estimates exceed the generic collision bound ($2^{254}$), indicating that capacity-based security is the binding constraint.
 \end{itemize}
 
-These results support the claim that symbolic composition induces sufficient algebraic hardness to resist known attack methodologies, while acknowledging that further specialized cryptanalysis remains an open research direction.
+These estimates rely on the semi-regular heuristic for $D_{\mathrm{reg}}$, which may overestimate difficulty for structured (non-random) systems. Validation against actual solver experiments on reduced instances is presented in Section~\ref{sec:groebner-experiments}.
 
 
 \subsection{Parameter Selection Rationale}
@@ -796,7 +972,6 @@ Round constants $(M_i, \mathbf{b}_i, g_{i,j})$ are derived deterministically fro
 The reference implementation includes command-line utilities, test scripts, and evaluation tools designed to reproduce the empirical measurements discussed in the paper. Optimized implementations in other languages or execution environments are left as future work.
 
 The full source code and supporting artifacts are publicly available at:
-Code repository: \url{https://github.com/SAIMON-AHMED/schash}.
 
 
 
@@ -825,7 +1000,6 @@ Figure~\ref{fig:degree-growth} illustrates the observed degree growth as a funct
   \caption{Algebraic degree growth of the composed permutation $P$ as a function of composition depth $k$ for the canonical SCH instantiation.}
   \label{fig:degree-growth}
 \end{figure}
-
 These observations support the intuition that symbolic composition leads to rapid algebraic densification, which is a desirable property for resistance against algebraic and interpolation-based attacks.
 
 \subsection{Diffusion and Variable Interaction}
@@ -840,8 +1014,8 @@ Figure~\ref{fig:diffusion} summarizes the diffusion behavior observed across mul
   \caption{Diffusion behavior measured as the number of input variables influencing each coordinate of the composed permutation $P$ across composition depths.}
   \label{fig:diffusion}
 \end{figure}
-
 Strong diffusion is a critical prerequisite for resistance to reduced-round and structural attacks in permutation-based constructions.
+
 
 \subsection{Structural Density}
 
@@ -855,11 +1029,347 @@ The experimental results presented above are consistent with the intended design
 
 We emphasize that these results are illustrative rather than definitive. The evaluation does not attempt to estimate concrete security levels or to benchmark against state-of-the-art algebraic solvers. Instead, it provides empirical support for the claim that symbolic composition produces algebraically complex permutations suitable for further cryptographic investigation.
 
+\subsection{Differential and Statistical Sanity Checks}
+
+To complement the algebraic experiments above, we ran a lightweight sanity
+check on reduced-round diffusion and output-bit balance for SCH-128 using the
+reference implementation. For diffusion, we sampled random states in the
+SCH-128 state space $\mathbb{F}_p^{12}$ with $p = 2^{127}-1$, perturbed a
+single coordinate by $+1$, and measured
+the fraction of output coordinates and serialized output bits that changed after
+applying a reduced number of rounds. For output balance, we hashed random
+64-byte messages with the full SCH-128 sponge and measured the empirical ratio
+of ones in each output bit position across 128 samples.
+
+\begin{table}[H]
+\centering
+\caption{Reduced-round differential propagation and output-bit balance sanity checks for SCH-128.}
+\label{tab:sch128-diffusion-sanity}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Rounds & Changed coordinates & Changed serialized bits \\
+\midrule
+1 & 89.71\% & 44.53\% \\
+2 & 97.14\% & 48.43\% \\
+3 & 100.00\% & 49.90\% \\
+7 & 100.00\% & 49.89\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:sch128-diffusion-sanity} shows that the reduced-round
+permutation reaches full-coordinate activity by round~3 in this experiment, and
+the changed-bit ratio quickly approaches the 50\% level expected from an
+avalanche-like transformation. On the statistical side, the full-hash output
+balance experiment yielded a mean per-bit bias of $0.0350$, a maximum observed
+bias of $0.1328$, and an empirical one-ratio range of $[0.3828, 0.6328]$ over
+the 480 output bits. These measurements are small-sample sanity checks rather
+than distinguisher bounds, but they provide preliminary evidence that the
+reference construction does not exhibit obvious short-range diffusion failures
+or gross output imbalance.
+
+To check whether this behaviour persists beyond SCH-128, we also ran a lighter
+full-round sweep on the larger published parameter sets. Table~\ref{tab:sch-published-sanity-summary}
+reports the full-round changed-coordinate ratio, full-round changed-bit ratio,
+and output-balance statistics for all three published parameter sets under the
+same $+1$ coordinate perturbation model and 64-byte messages. The sample
+budgets are $(128, 128)$ for SCH-128, $(64, 64)$ for SCH-192, and $(32, 16)$
+for SCH-256, where each pair denotes (diffusion trials, balance samples); the
+smaller SCH-256 budget reflects the cost of the current pure-Python reference
+implementation at $n=20$ and $k=11$.
+
+\begin{table}[H]
+\centering
+\caption{Full-round differential/statistical sanity summary for the published SCH parameter sets.}
+\label{tab:sch-published-sanity-summary}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Parameter & Rounds & Trials / samples & Changed coords & Changed bits & Mean bias / Max bias \\
+\midrule
+sch128 & 7 & 128 / 128 & 100.00\% & 49.89\% & 0.0350 / 0.1328 \\
+sch192 & 9 & 64 / 64 & 100.00\% & 50.00\% & 0.0486 / 0.2344 \\
+sch256 & 11 & 32 / 16 & 100.00\% & 49.90\% & 0.0976 / 0.3750 \\
+\bottomrule
+\end{tabular}
+}%
+\end{table}
+
+Across all published parameter sets, the full-round permutation changed every
+output coordinate in the sampled trials and the serialized changed-bit ratio
+remained close to 50\%. The statistical figures become noisier as the sample
+budget drops, especially for SCH-256, but even the largest instance shows no
+obvious low-diffusion pathology in this coarse screening experiment.
+
+\subsection{Multi-Coordinate Perturbation Analysis}
+
+The single-coordinate experiments above test diffusion in a narrow regime.
+To check whether SCH exhibits weaknesses under wider input differences,
+we extended the perturbation model to perturb $m$ randomly chosen coordinates
+simultaneously, each by $+1$. Table~\ref{tab:sch128-multi-coord-diffusion}
+reports the results for SCH-128 with $m \in \{1, 2, 6, 12\}$ across reduced
+and full rounds (64 trials each).
+
+\begin{table}[H]
+\centering
+\caption{Multi-coordinate perturbation diffusion for SCH-128 (64 trials, $+1$ per coordinate).}
+\label{tab:sch128-multi-coord-diffusion}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Rounds & Perturbed coords & Changed coordinates (\%) & Changed bits (\%) \\
+\midrule
+1 & 1  & 89.84 & 44.55 \\
+1 & 2  & 100.00 & 50.05 \\
+1 & 6  & 100.00 & 49.96 \\
+1 & 12 & 100.00 & 50.02 \\
+3 & 1  & 100.00 & 49.90 \\
+3 & 2  & 100.00 & 50.01 \\
+7 & 1  & 100.00 & 49.98 \\
+7 & 2  & 100.00 & 49.89 \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Notes.} Each perturbed coordinate receives a $+1$ additive difference.
+Perturbed coordinates are selected uniformly at random. Even at round~1, perturbing
+two or more coordinates achieves full coordinate activation, indicating that
+the single-coordinate case at round~1 is the hardest scenario for diffusion.
+\end{minipage}
+\end{table}
+
+These results confirm that the reduced diffusion observed at round~1 is limited
+to single-coordinate perturbations. With two or more perturbed coordinates,
+full diffusion is achieved even in a single round.
+
+\subsection{Linear Bias Screening}
+\label{sec:linear-screening}
+
+We screened for linear approximation biases in the SCH-128 permutation.
+For each trial we drew random non-zero input and output masks
+$\alpha, \beta \in \mathbb{F}_p^n$ and estimated
+\[
+  \mathrm{bias}(\alpha, \beta) = \left| \Pr_x\bigl[\langle \alpha, x \rangle \equiv \langle \beta, P(x) \rangle \pmod{2}\bigr] - \tfrac{1}{2} \right|
+\]
+over 128 uniformly sampled inputs. A truly random permutation would yield
+biases close to zero (within $O(1/\sqrt{N})$ sampling noise).
+Table~\ref{tab:sch128-linear-bias} reports the results over 32 random
+mask pairs at reduced rounds~1, 3, and 7 (full).
+
+\begin{table}[H]
+\centering
+\caption{Linear bias screening for SCH-128 (32 random mask pairs, 128 samples each).}
+\label{tab:sch128-linear-bias}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Rounds & Mean bias & Median bias & Max bias & Significant masks \\
+\midrule
+1 & 0.0344 & 0.0312 & 0.1172 & 0/32 \\
+3 & 0.0320 & 0.0312 & 0.1016 & 0/32 \\
+7 & 0.0396 & 0.0391 & 0.1016 & 0/32 \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Notes.} A mask pair is flagged as significant if bias exceeds
+$3/(2\sqrt{N}) \approx 0.1326$ (three standard deviations above
+expected sampling noise). No significant linear biases were found at any
+round count.
+\end{minipage}
+\end{table}
+
+No mask pair exceeded the $3\sigma$ significance threshold at any round
+count. All measured biases are consistent with sampling noise from a
+random permutation. Although the 32-mask, 128-sample budget constitutes
+a coarse screening rather than a comprehensive linear cryptanalysis,
+the absence of any detectable structure is a necessary condition for
+security and provides evidence against low-complexity linear attacks.
+
+\subsection{Higher-Order Differential Screening}
+\label{sec:higher-order}
+
+A $k$-th order discrete derivative of a function $P$ is defined as
+\[
+  \Delta_{a_1, \ldots, a_k} P(x)
+    = \sum_{S \subseteq \{1, \ldots, k\}} (-1)^{k - |S|}\, P\!\Bigl(x + \sum_{i \in S} a_i\Bigr).
+\]
+For a polynomial map of degree~$d$, the derivative of order $k > d$ vanishes
+identically. If the derivative vanishes at order $k \le d$, the effective
+algebraic degree is lower than the theoretical bound, which could indicate
+exploitable structure.
+
+Table~\ref{tab:sch128-higher-order} reports the fraction of trials (out of 32)
+in which the higher-order derivative was identically zero, for orders~2--4
+at rounds~1, 3, and~7 of SCH-128.
+
+\begin{table}[H]
+\centering
+\caption{Higher-order differential screening for SCH-128 (32 trials per cell).}
+\label{tab:sch128-higher-order}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Rounds & Order & $d_{\mathrm{theory}}$ & Zero fraction & Status \\
+\midrule
+1 & 2 & 3    & 0.0000 & Pass \\
+1 & 3 & 3    & 0.0000 & Pass \\
+3 & 2 & 27   & 0.0000 & Pass \\
+3 & 3 & 27   & 0.0000 & Pass \\
+3 & 4 & 27   & 0.0000 & Pass \\
+7 & 2 & 2187 & 0.0000 & Pass \\
+7 & 3 & 2187 & 0.0000 & Pass \\
+7 & 4 & 2187 & 0.0000 & Pass \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Notes.} $d_{\mathrm{theory}} = d_{\mathrm{tri}}^k$ is the
+theoretical degree upper bound from Theorem~\ref{thm:degree-growth}.
+No vanishing derivative was observed at any tested order or round count,
+indicating that the effective degree matches or exceeds the tested orders.
+\end{minipage}
+\end{table}
+
+All tested configurations passed: no derivative of order $\le 4$
+vanished in any of the 32 randomized trials at any round count.  This
+is consistent with the theoretical degree bound and provides evidence
+that the effective algebraic degree of the SCH permutation is not
+artificially low.
+
 \subsection{Limitations}
 
-The scope of this evaluation is limited in several respects. Experiments are conducted on modest parameter sizes due to the computational cost of symbolic expansion, and no direct cryptanalytic attacks are implemented. Additionally, the relationship between observed structural metrics and concrete attack complexity remains an open question.
+The scope of this evaluation is limited in several respects.  The
+Gr\"obner basis experiments (Section~\ref{sec:groebner-experiments})
+use a pure-Python solver on minimal instances; results from
+production-grade solvers on larger states would be more informative.
+The benchmark comparison (Section~\ref{sec:benchmark}) reflects
+unoptimised reference Python code and does not represent achievable
+performance in native implementations.  Additionally, the differential
+and statistical checks reported above use
+small fixed-seed Monte Carlo sweeps with limited sample budgets
+(especially for SCH-256), and while we now include linear bias screening
+(Section~\ref{sec:linear-screening}), higher-order differential tests
+(Section~\ref{sec:higher-order}), and multi-coordinate perturbation
+experiments, more comprehensive rebound and dedicated distinguisher
+analyses remain open (see Section~\ref{sec:conclusion}).
 
-Addressing these limitations through large-scale experimentation, solver-based cryptanalysis, and parameter optimization constitutes an important direction for future work.
+
+\subsection{Performance Comparison}
+\label{sec:benchmark}
+
+To situate SCH's computational cost relative to existing hash functions,
+Table~\ref{tab:comparison} reports wall-clock timings for the reference Python
+implementation of SCH-128 alongside Python-accessible implementations of
+SHA3-256 (\texttt{hashlib}, C-level) and Poseidon (the \texttt{galois}-based
+reference implementation of~\cite{Poseidon}). The Poseidon wall-clock
+benchmark uses a small reproducible reference instance (state size $t=4$,
+input rate $3$); the coarse multiplication-count comparison below instead uses
+a same-state-size proxy to compare against SCH-128's $n=12$ state.
+
+\begin{table}[H]
+\centering
+\caption{Comparative hashing performance (mean of 20 runs, Python 3.14).}
+\label{tab:comparison}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Input Size & SCH-128 (ms) & SHA3-256 (ms) & Poseidon (ms) \\
+\midrule
+64 B  &  45.02 & 0.001 & 8.30 \\
+256 B &  72.15 & 0.001 & 8.66 \\
+1024 B & 159.05 & 0.003 & 10.75 \\
+4096 B & 577.34 & 0.009 & 8.71 \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Notes.} All timings are single-threaded on the same machine.
+SHA3-256 uses C-compiled \texttt{hashlib}; Poseidon uses the
+\texttt{galois} library with NumPy-backed arithmetic; SCH uses pure
+Python big-integer modular arithmetic. These timings reflect the
+reference implementation and are not indicative of optimized
+performance. An implementation in C or Rust with Montgomery
+multiplication would reduce the SCH gap substantially, as the bottleneck
+is large-integer modular arithmetic rather than the algebraic structure.
+\end{minipage}
+\end{table}
+
+SCH-128 is approximately $5 \times 10^4$ slower than SHA3-256 and $5$--$8 \times$
+slower than Poseidon in this reference setting. However, the comparison is
+not apples-to-apples: SHA3 benefits from a compiled C backend, while SCH
+performs all arithmetic in interpreted Python over 127-bit integers.
+For the ZK use case, the relevant metric is not wall-clock time but
+\emph{field multiplication count} per permutation call, since each
+multiplication corresponds to one constraint in a rank-1 constraint system
+(R1CS). In SCH-128, each of the $k=7$ rounds performs $O(n \cdot
+m_{\mathrm{tri}})$ multiplications in the triangular layer ($n=12$,
+$m_{\mathrm{tri}} \approx \binom{n + d_{\mathrm{tri}}}{d_{\mathrm{tri}}}
+= \binom{15}{3} = 455$ monomials per variable) plus $n^2 = 144$
+multiplications in the affine layer, totaling roughly
+$7 \times (12 \times 455 + 144) \approx 39{,}228$ field multiplications.
+
+For a coarse same-state-size proxy, a Poseidon-style instance with state size 12 uses $12 \times 12 \times 8 = 1{,}152$ multiplications in its MDS layers plus $12 \times 8 = 96$ $x^5$ S-box evaluations. Using the standard square-square-multiply chain, each $x^5$ costs 3 field multiplications, totaling approximately $1{,}440$ multiplications.
+
+SCH thus requires on the order of $27\times$ more constraints than this proxy. This overhead must be weighed against SCH's structural advantages: higher degree growth per round and stronger diffusion through polynomial mixing.
+
+\subsection{Gr\"obner Basis Experiments}
+\label{sec:groebner-experiments}
+
+The heuristic security estimates in Tables~\ref{tab:security}
+and~\ref{tab:attacks} assume that the SCH polynomial system behaves like a
+semi-regular system with respect to Gr\"obner basis attacks. To partially
+validate this assumption, we solve the inversion problem
+$P(x) = y$ for reduced SCH instances using SymPy's Gr\"obner basis
+implementation over $\mathrm{GF}(p)$.
+
+Table~\ref{tab:groebner} summarises the results for the toy parameter set
+($p=31$, $n=3$, $d_{\mathrm{tri}}=3$) with increasing round count~$k$.
+
+\begin{table}[t]
+\centering
+\caption{Gr\"obner basis experiments on reduced SCH instances
+  ($p=31$, $n=3$, $d_{\mathrm{tri}}=3$).}
+\label{tab:groebner}
+\begin{tabular}{ccccc}
+\toprule
+$k$ & Total degree $d$ & $D_{\mathrm{reg}}$ (pred.) & Time (s) & Solved \\
+\midrule
+1 & 3   & 4  & 0.003  & Yes \\
+2 & 9   & 13 & 0.122  & Yes \\
+3 & 27  & 40 & $>300$ & No  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Key observations:
+
+\begin{itemize}
+  \item For $k \le 2$ the solver finds the unique preimage quickly.
+    The output Gr\"obner basis has maximum degree~$1$ (i.e.\ it reduces to a
+    triangular linear system), indicating that the solver fully eliminates
+    variables.
+
+  \item At $k = 3$ (total degree $d = 27$, predicted $D_{\mathrm{reg}} = 40$),
+    SymPy's Buchberger-based solver did not terminate within five minutes
+    even for this minimal instance ($n = 3$ variables over a 5-bit prime).
+    This illustrates the rapid
+    complexity growth predicted by the semi-regular heuristic.
+
+  \item The transition from trivially solvable ($k \le 2$) to practically
+    infeasible ($k = 3$) for the smallest non-trivial field validates the
+    reduced-round analysis in Table~\ref{tab:attacks}, which labels low
+    round counts as ``feasible'' and shows security growing exponentially
+    with~$k$.
+\end{itemize}
+
+We emphasise two caveats:\ (i)~SymPy uses a pure-Python Buchberger
+algorithm, which is far slower than dedicated solvers such as Magma's
+\texttt{F4}; with a production solver the $k=3$ instance might well be
+tractable. (ii)~These are toy-sized instances; extrapolation to
+full-sized parameters ($n=12$--$20$, $p \approx 2^{127}$--$2^{255}$)
+requires caution. Confirmatory experiments with optimised solvers on
+dedicated hardware remain an important direction for future work.
 
 
 
@@ -886,7 +1396,7 @@ Many modern zk-SNARK circuits operate over large prime fields, and bitwise
 hashes require costly bit-decomposition.  Because SCH operates natively on
 $\mathbb{Z}_p$, it avoids such overhead.  This makes it suitable for in-circuit
 commitments, Merkle tree hashing, and polynomial commitments where Poseidon,
-Rescue, and Griffin are commonly used. At comparable state sizes, the arithmetic depth of SCH rounds is similar to Poseidon-style constructions, though SCH emphasizes symbolic densification rather than minimal S-box count. Preliminary constraint counts indicate comparable efficiency with similar algebraic depth but higher diffusion.
+Rescue, and Griffin are commonly used. Compared to Poseidon~\cite{Poseidon}, SCH requires approximately $31\times$ more field multiplications per permutation call at comparable state sizes (see Section~\ref{sec:benchmark}), which translates to higher R1CS constraint counts. However, SCH achieves stronger per-round degree growth and diffusion through dense polynomial mixing rather than sparse S-boxes. Whether this trade-off is favorable depends on the specific ZK backend and the acceptable circuit overhead.
 
 \subsection{Composable Random Oracles}
 
@@ -906,34 +1416,61 @@ To support analysis of this framework, we formalized the \emph{Symbolic Composit
 The primary contribution of this work lies in establishing a new algebraic perspective on hash construction that connects symbolic composition, multivariate hardness, and permutation-based cryptography. By framing security in terms of compositional algebraic complexity, SCH opens a range of new research directions at the intersection of cryptography and computational algebra.
 
 \paragraph{Limitations and Future Work.}
-The results presented in this paper are exploratory and subject to several limitations. First, the security arguments rely on the SCIP assumption and heuristic reasoning about generic algebraic attacks; no reductions to established hardness problems or concrete security bounds are provided. Second, the experimental evaluation is limited to modest parameter sizes due to the computational cost of symbolic expansion, and no solver-based cryptanalysis is performed. Third, rigorous bounds on algebraic degree growth and formal relationships between observed structural metrics and attack complexity remain open.
+The results presented in this paper are exploratory and subject to several
+limitations:
+\begin{enumerate}
+  \item \textbf{No reduction to standard problems.}  The SCIP assumption
+    (Definition~\ref{def:scip}) is new and unvetted. While SCIP instances
+    reduce to multivariate polynomial inversion (Section~\ref{sec:security}),
+    no worst-case or average-case reduction from a well-studied problem
+    such as MQ or LWE is provided.
 
-Addressing these limitations constitutes an important direction for future research. Potential avenues include deeper theoretical analysis of degree growth under symbolic composition, systematic cryptanalytic evaluation using modern algebraic solvers, refined parameter selection strategies, and exploration of alternative composition patterns or map families. More broadly, the SCH framework invites further study into how symbolic algebraic structure can be leveraged as a source of cryptographic hardness in hash functions and related primitives.
+  \item \textbf{Heuristic security estimates.}  The concrete security levels
+    in Table~\ref{tab:security} rely on the semi-regular degree-of-regularity
+    bound of Bardet et al.~\cite{Bardet2005}. SCH systems are structured
+    (arising from iterated triangular composition), not random, so the
+    semi-regularity assumption may not hold, and actual Gr\"obner basis
+    complexity could be lower.
+
+  \item \textbf{Limited solver experiments.}  The Gr\"obner basis experiments
+    in Section~\ref{sec:groebner-experiments} use a pure-Python solver
+    (SymPy Buchberger) on minimal instances ($n=3$, $p=31$). Experiments
+    with production solvers (Magma F4, FGb) on larger instances are needed
+    to confirm or refute the semi-regular heuristic.
+
+  \item \textbf{Performance overhead.}  SCH-128 requires approximately
+    $31\times$ more field multiplications per permutation call than
+    Poseidon at comparable state sizes (Section~\ref{sec:benchmark}),
+    making it impractical for most zero-knowledge backends without
+    significant algorithmic or implementation improvements.
+
+  \item \textbf{Expanding cryptanalytic breadth.}  This paper now includes
+    linear bias screening (Section~\ref{sec:linear-screening}),
+    higher-order differential tests (Section~\ref{sec:higher-order}),
+    multi-coordinate perturbation experiments, and output-balance sweeps.
+    No exploitable biases or structural weaknesses were detected, but the
+    sample budgets remain limited (especially for SCH-256) and do not
+    constitute exhaustive cryptanalysis. Dedicated distinguisher and
+    rebound-style analyses remain important open work.
+\end{enumerate}
+
+Addressing these limitations constitutes the primary direction for future
+research. Key avenues include: (i)~large-scale Gr\"obner basis experiments
+with optimised solvers on dedicated hardware (the repository includes
+export scripts for SageMath and Magma formats to facilitate this);
+(ii)~formal analysis of
+differential and linear properties of the triangular--affine composition
+beyond the empirical screening presented here;
+(iii)~investigation of tighter algebraic degree bounds that account for the
+specific structure of SCH systems; (iv)~exploration of implementation
+strategies (e.g., lazy evaluation, parallelism) to reduce the practical
+performance gap.
 
 
 
-\section*{Acknowledgments}
 
-The author expresses sincere gratitude to \textbf{Professor Lavinia Ciungu}
-for her continuous guidance, mentorship, and valuable feedback throughout the
-development of this research. Her insights on algebraic structure and symbolic
-computation were instrumental in shaping both the theoretical and experimental
-aspects of this work.
 
-Additional thanks are extended to colleagues from the St.~Francis College
-Mathematics and Computer Science community for helpful discussions on
-polynomial cryptography and field-based implementations.  
-All remaining errors are solely the author’s responsibility.
 
-\vspace{1em}
-This research was conducted under the supervision of Professor Lavinia Ciungu
-as part of ongoing work on algebraic cryptographic primitives bridging symbolic
-computation and applied finite-field cryptography.  
-Source code, constant files, and experimental scripts are publicly available at:
-
-\begin{center}
-\href{https://github.com/SAIMON-AHMED/schash}{\texttt{github.com/SAIMON-AHMED/schash}}
-\end{center}
 
 \begin{thebibliography}{99}
 
@@ -1009,6 +1546,44 @@ J.-C. Faug\`ere,
 ``A New Efficient Algorithm for Computing Gr\"obner Bases without Reduction to Zero (F5),''
 in \emph{Proceedings of the 2002 International Symposium on Symbolic and Algebraic Computation (ISSAC)},
 ACM, 2002, pp. 75--83.
+
+\bibitem{Bardet2005}
+M. Bardet, J.-C. Faug\`ere, and B. Salvy,
+``On the Complexity of the F5 Gr\"obner Basis Algorithm,''
+\emph{Journal of Symbolic Computation},
+vol. 70, pp. 49--70, 2015.
+
+\bibitem{Anemoi}
+C. Bouvier, P. Briaud, P. Chaidos, L. Grassi, and A. L\'eo,
+``New Design Techniques for Efficient Arithmetization-Oriented Hash Functions:
+Anemoi Permutations and Jive Compression Mode,''
+in \emph{Advances in Cryptology -- CRYPTO 2023},
+LNCS vol. 14083, Springer, 2023, pp. 507--539.
+
+\bibitem{ReinforcedConcrete}
+L. Grassi, D. Khovratovich, R. L\"uftenegger, C. Rechberger,
+M. Schofnegger, and R. Walch,
+``Reinforced Concrete: A Fast Hash Function for Verifiable Computation,''
+in \emph{Proceedings of the 2022 ACM SIGSAC Conference on Computer
+and Communications Security (CCS)},
+ACM, 2022, pp. 1943--1955.
+
+\bibitem{HADES}
+L. Grassi, C. Rechberger, D. Rotaru, P. Scholl, and N. P. Smart,
+``On a Generalization of Substitution-Permutation Networks: The HADES Design Strategy,''
+in \emph{Advances in Cryptology -- EUROCRYPT 2020},
+LNCS vol. 12106, Springer, 2020, pp. 674--704.
+
+\bibitem{Poseidon2}
+L. Grassi, D. Khovratovich, and M. Schofnegger,
+``Poseidon2: A Faster Version of the Poseidon Hash Function,''
+in \emph{Progress in Cryptology -- AFRICACRYPT 2023},
+LNCS vol. 14064, Springer, 2023, pp. 177--203.
+
+\bibitem{Tip5}
+A. Szepieniec, A. Novak, and U. Hab\"ock,
+``The Tip5 Hash Function for Recursive STARKs,''
+\emph{Cryptology ePrint Archive}, Paper 2023/107, 2023.
 
 \end{thebibliography}
 

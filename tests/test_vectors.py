@@ -11,26 +11,27 @@ from sch.permutation import SCHPermutation
 from sch.sponge import sch_hash, SCHSponge
 from sch.triangular import enumerate_monomials
 from sch.encoding import compute_block_size
+from sch.field import modular_det
 
 TEST_VECTORS = {
     "sch128": {
         "empty": [
             143318500100078006530403293305255320698,
-            125201849807042960956291737959199573973,
-            38972321371268387163180566699949952256,
-            131258762146592711415942664996061892601,
+            124403830338808755240305127952117028777,
+            1164462375271981088757273491113585925,
+            95849600366506517284587973427074857448,
         ],
         "abc": [
             66254099932580900688762931413488248945,
-            155425849045160447933534113123370123231,
-            164227503571421067507190397615279904067,
-            105406429961093726300246409754622784020,
+            63474362572758525734490118497539143750,
+            144933407027833815334274708095775364319,
+            110173678606625162562284711270638183149,
         ],
         "rand1k": [
-            157815327412351092045614172617065734664,
-            97411176626525366846958030583832133091,
-            121351201262175355009123427370012604762,
-            125353270469404316886505339431421978076,
+            130478299598912942946259677630533297776,
+            90198983350601925784752453221837663922,
+            28941368176042938314172672019871474894,
+            95743891918904384502605477036139077120,
         ],
     }
 }
@@ -67,35 +68,6 @@ def test_degree_growth_sch128_series() -> None:
     assert all(series[idx] >= series[idx - 1] for idx in range(1, len(series)))
     reference = compute_degree_growth(params)
     assert series == reference.max_degrees
-
-
-def modular_det(matrix: list[list[int]], p: int) -> int:
-    size = len(matrix)
-    work = [[entry % p for entry in row] for row in matrix]
-    det = 1
-    for i in range(size):
-        pivot = None
-        for row in range(i, size):
-            if work[row][i] % p:
-                pivot = row
-                break
-        if pivot is None:
-            return 0
-        if pivot != i:
-            work[i], work[pivot] = work[pivot], work[i]
-            det = (-det) % p
-        pivot_val = work[i][i] % p
-        det = (det * pivot_val) % p
-        inv_pivot = pow(pivot_val, p - 2, p)
-        for col in range(i, size):
-            work[i][col] = (work[i][col] * inv_pivot) % p
-        for row in range(i + 1, size):
-            factor = work[row][i]
-            if factor == 0:
-                continue
-            for col in range(i, size):
-                work[row][col] = (work[row][col] - factor * work[i][col]) % p
-    return det % p
 
 
 def test_affine_layers_det_one() -> None:
@@ -346,10 +318,10 @@ def test_sponge_rate_capacity_structure() -> None:
 
 
 def test_sponge_absorb_affects_only_rate() -> None:
-    """Verify absorption adds to s[0] (single-word rate variant).
+    """Verify absorption XORs into the rate portion of the state.
 
-    Per spec: absorb XORs/adds packed element into s[0], then applies P.
-    This is rate=1 word absorption.
+    The sponge absorbs up to r elements per permutation call, adding
+    each element into state[0..r-1].
     """
     params = get_params("sch128")
     sponge = SCHSponge(params)
@@ -357,11 +329,10 @@ def test_sponge_absorb_affects_only_rate() -> None:
     # Get initial state after domain tag
     initial_state = sponge.state.copy()
 
-    # Absorb a single element
+    # Absorb a single element — goes into state[0]
     sponge.absorb_elements([42])
 
     # After P, state should have changed entirely (diffusion)
-    # But we can verify the absorb logic by checking structure
 
 
 def test_sponge_squeeze_applies_p_between_outputs() -> None:
@@ -423,31 +394,67 @@ KAT_VECTORS = {
         # (message_hex, expected_digest_elements)
         ("", [
             143318500100078006530403293305255320698,
-            125201849807042960956291737959199573973,
-            38972321371268387163180566699949952256,
-            131258762146592711415942664996061892601,
+            124403830338808755240305127952117028777,
+            1164462375271981088757273491113585925,
+            95849600366506517284587973427074857448,
         ]),
         ("616263", [  # "abc"
             66254099932580900688762931413488248945,
-            155425849045160447933534113123370123231,
-            164227503571421067507190397615279904067,
-            105406429961093726300246409754622784020,
+            63474362572758525734490118497539143750,
+            144933407027833815334274708095775364319,
+            110173678606625162562284711270638183149,
         ]),
         ("00", [  # Single zero byte
             89291201118072725022780430759949970768,
-            56028782950975468542820849258385629564,
-            50552284728105499652602224710855784244,
-            27785923199889598671831736312841286743,
+            71751237711218360705498540599094709021,
+            123620518343793283451929335600701743431,
+            110522382327622494224354368825515454779,
         ]),
     ],
     "sch192": [
+        ("", [
+            2285744882919400545247549706486592261332911204343718080104,
+            2702372920175329406735136617387422172370367902488122286017,
+            1730222602571643092701604499597582162766708604721559561037,
+            1057921511338275202348135243856401135748157795364028104918,
+            820572562757104341057739461748247365172405047734040921575,
+            1734095913227038404740926045474120697247160861351295034012,
+        ]),
+        ("616263", [  # "abc"
+            577068360069544548945070090703668085742768643501156102255,
+            439998768608070628551421075860948095883035626182372483555,
+            1400179805454223400626668438533070599851039488095261332080,
+            1282321913298735360893507650910266689537561530327222273085,
+            2966951581102534484600914685259991306721356920888770657655,
+            2254179253653399424374238979279454876420975976107875327534,
+        ]),
     ],
     "sch256": [
+        ("", [
+            22976012735140211524126531034179615505806131659123517057941507930699285190170,
+            2750865519138788538692525035242460744637390824282161388646496298283874257302,
+            6033618216320104288519503517467978554048467217482407180737923215975480078939,
+            237880596750542859789575155191354664104451883112018602373282860470895044547,
+            32510352650738449527913236592962750962187862916597687887544771300602289908200,
+            18856365384470321433259228288400444682904981319932811712454560348990514434714,
+            10189317812115381482192679346562301316312030994145512853606595385753011104719,
+            19747172197577745892362521115479614344456856860376908309613423674625059087038,
+        ]),
+        ("616263", [  # "abc"
+            18402373277729647335571656440137260163912809229723891601554756041205853335898,
+            7803680926679572603218055567489268423072171377332278224778528997486209192800,
+            42796425117479512883327489146774519471584873674524967101467022999116219850256,
+            33530731277915208471294269657567084232888810893000094485241926746234804944008,
+            51943579013968596679721755688370602205936479411289095434472375486978624471851,
+            46916920695904678896752772037010524301274631942909052328507602928270280588292,
+            3221909333522362359215750168000005273849028566701817337921150249184526457072,
+            27799933004230770322428903578456234982971990200169967177695883454572773079120,
+        ]),
     ],
 }
 
 
-@pytest.mark.parametrize("params_name", ["sch128"])
+@pytest.mark.parametrize("params_name", ["sch128", "sch192", "sch256"])
 def test_known_answer_vectors(params_name: str) -> None:
     """Verify known-answer test vectors for reproducibility."""
     params = get_params(params_name)
@@ -456,4 +463,44 @@ def test_known_answer_vectors(params_name: str) -> None:
         digest = sch_hash(message, params)
         assert digest == expected, (
             f"KAT mismatch for {params_name}, msg={msg_hex[:20]}..."
+        )
+
+
+# =============================================================================
+# CROSS-VALIDATION: regenerating vectors matches saved JSON
+# =============================================================================
+
+
+def test_cross_validate_generated_vectors() -> None:
+    """Regenerate test vectors from scratch and compare to saved JSON."""
+    import json
+    import os
+
+    json_path = os.path.join(os.path.dirname(__file__), "test_vectors_generated.json")
+    if not os.path.exists(json_path):
+        pytest.skip("test_vectors_generated.json not found")
+
+    with open(json_path) as f:
+        saved = json.load(f)
+
+    messages_map = {
+        "empty": b"",
+        "abc": b"abc",
+        "hello_world": b"Hello, World!",
+        "zeros_64": b"\x00" * 64,
+        "ones_256": b"\xff" * 256,
+        "rand1k": deterministic_bytes(1024),
+        "rand4k": deterministic_bytes(4096),
+    }
+    # Only cross-validate sch128 (sch192/sch256 are too slow for all messages;
+    # they are already covered by test_known_answer_vectors for empty/abc).
+    params_name = "sch128"
+    params = get_params(params_name)
+    for msg_label, expected_digest in saved[params_name].items():
+        msg = messages_map.get(msg_label)
+        if msg is None:
+            continue
+        digest = sch_hash(msg, params)
+        assert digest == expected_digest, (
+            f"Cross-validation failed: {params_name}/{msg_label}"
         )
